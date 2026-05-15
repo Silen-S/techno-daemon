@@ -138,13 +138,14 @@ export class BeatEngine {
       }
 
       if (track.id === "hat") {
-        nodes.hat.frequency.value = track.soundId.includes("white") ? 360 : 240;
-        nodes.hat.triggerAttackRelease("32n", time, velocity * 0.54);
+        const frequency = track.soundId.includes("white") ? 360 : 240;
+        nodes.hat.frequency.setValueAtTime(frequency, time);
+        nodes.hat.triggerAttackRelease(frequency, "32n", time, velocity * 0.54);
       }
 
       if (track.id === "bass") {
         const notes = ["C2", "C2", "D#2", "C2", "G1", "C2", "A#1", "C2"];
-        nodes.bass.filter.frequency.rampTo(filterTone, 0.02);
+        nodes.bass.filter.frequency.setValueAtTime(filterTone, time);
         nodes.bass.triggerAttackRelease(notes[Math.floor(step / 2) % notes.length], "16n", time, velocity * 0.65);
       }
     });
