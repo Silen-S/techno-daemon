@@ -89,8 +89,12 @@ export class BeatEngine {
   }
 
   stop() {
-    this.Tone?.Transport.stop();
+    if (this.Tone) {
+      this.Tone.Transport.stop();
+      this.Tone.Transport.position = 0;
+    }
     this.step = 0;
+    this.bar = 0;
     this.options.onStep(-1);
   }
 
