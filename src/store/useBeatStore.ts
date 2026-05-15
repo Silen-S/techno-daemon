@@ -128,6 +128,10 @@ export const useBeatStore = create<BeatStore>()(
         })),
       requestMutation: () =>
         set((state) => {
+          if (state.pending) {
+            return {};
+          }
+
           const current = snapshotFromState(state);
           return {
             ...mutateSnapshot(current),

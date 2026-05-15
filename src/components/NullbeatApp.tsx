@@ -182,7 +182,7 @@ export function NullbeatApp() {
           </div>
 
           <div className="actionStack">
-            <button onClick={state.requestMutation} type="button">
+            <button disabled={!!state.pending} onClick={state.requestMutation} type="button">
               Mutate
             </button>
             <button disabled={!state.pending} onClick={state.acceptMutation} type="button">
