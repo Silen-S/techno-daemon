@@ -249,13 +249,13 @@ function TrackRow({
       </div>
 
       <div className="steps">
-        {track.pattern.map((enabled, index) => (
+        {track.steps.map((step, index) => (
           <button
             aria-label={`${track.name} step ${index + 1}`}
-            className={[enabled ? "step on" : "step", activeStep === index ? "playing" : ""].join(" ")}
+            className={[step.enabled ? "step on" : "step", activeStep === index ? "playing" : "", step.lastMutated ? "mutated" : ""].join(" ")}
             key={`${track.id}-${index}`}
             onClick={() => onToggleStep(index)}
-            style={{ "--velocity": track.velocity[index] } as React.CSSProperties}
+            style={{ "--velocity": step.velocity } as React.CSSProperties}
             type="button"
           />
         ))}

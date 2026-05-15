@@ -106,7 +106,7 @@ export class BeatEngine {
   }
 
   private shouldTrigger(track: TrackState, step: number) {
-    return !track.muted && track.pattern[step];
+    return !track.muted && !!track.steps[step]?.enabled;
   }
 
   private tick(time: number, step: number) {
@@ -128,7 +128,7 @@ export class BeatEngine {
         return;
       }
 
-      const velocity = track.velocity[step] ?? 0.55;
+      const velocity = (track.steps[step]?.velocity ?? 0.55) * track.volume;
       const filterTone = Math.round(220 + track.filter * 5200);
 
       if (track.id === "kick") {

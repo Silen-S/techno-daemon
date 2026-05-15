@@ -18,11 +18,11 @@ const intentAdjustments: Record<PresetIntent, Partial<Record<MutationTarget, num
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 const pick = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
 
-const cloneTracks = (tracks: TrackState[]) =>
+const cloneTracks = (tracks: TrackState[]): TrackState[] =>
   tracks.map((track) => ({
     ...track,
-    pattern: [...track.pattern],
-    velocity: [...track.velocity]
+    steps: track.steps.map((step) => ({ ...step, lastMutated: false })),
+    lastMutatedTarget: undefined
   }));
 
 const euclidean = (hits: number, steps = STEPS) => {
@@ -34,7 +34,7 @@ const euclidean = (hits: number, steps = STEPS) => {
 };
 
 const mutatePattern = (track: TrackState) => {
-  const next = [...track.pattern];
+  const next = track.steps.map((step) => step.enabled);
   if (track.id === "kick") {
     const candidates = [3, 7, 10, 14, 15];
     const index = pick(candidates);
@@ -44,7 +44,7 @@ const mutatePattern = (track: TrackState) => {
   }
 
   if (track.id === "hat" && Math.random() > 0.5) {
-    return euclidean(pick([5, 6, 7, 9])).map((step, index) => step || (track.pattern[index] && Math.random() > 0.22));
+    return euclidean(pick([5, 6, 7, 9])).map((step, index) => step || (track.steps[index]?.enabled && Math.random() > 0.22));
   }
 
   const index = Math.floor(Math.random() * STEPS);
@@ -53,12 +53,25 @@ const mutatePattern = (track: TrackState) => {
 };
 
 const mutateVelocity = (track: TrackState) =>
-  track.velocity.map((velocity, index) => {
-    if (!track.pattern[index] || Math.random() > 0.35) {
-      return velocity;
+  track.steps.map((step) => {
+    if (!step.enabled || Math.random() > 0.35) {
+      return step;
     }
-    return clamp(velocity + (Math.random() - 0.5) * 0.26, 0.18, 0.95);
+    return {
+      ...step,
+      velocity: clamp(step.velocity + (Math.random() - 0.5) * 0.26, 0.18, 0.95),
+      lastMutated: true
+    };
   });
+
+const applyPattern = (track: TrackState, pattern: boolean[]) => ({
+  ...track,
+  steps: track.steps.map((step, index) => ({
+    ...step,
+    enabled: pattern[index] ?? false,
+    lastMutated: step.enabled !== (pattern[index] ?? false)
+  }))
+});
 
 export const mutateSnapshot = (snapshot: AppSnapshot): AppSnapshot => {
   const tracks = cloneTracks(snapshot.tracks);
@@ -72,7 +85,7 @@ export const mutateSnapshot = (snapshot: AppSnapshot): AppSnapshot => {
   const adjustment = intentAdjustments[snapshot.intent][target] ?? 0;
 
   if (target === "pattern") {
-    track.pattern = mutatePattern(track);
+    Object.assign(track, applyPattern(track, mutatePattern(track)));
   }
 
   if (target === "sound") {
@@ -87,20 +100,23 @@ export const mutateSnapshot = (snapshot: AppSnapshot): AppSnapshot => {
 
   if (target === "density") {
     track.density = clamp(track.density + (Math.random() - 0.5) * 0.2 + adjustment, 0.18, 0.96);
-    track.pattern = track.pattern.map((step, index) => {
+    const pattern = track.steps.map((step, index) => {
       if (index % 4 === 0 && track.id === "kick") {
         return true;
       }
       if (Math.random() < 0.08) {
         return Math.random() < track.density;
       }
-      return step;
+      return step.enabled;
     });
+    Object.assign(track, applyPattern(track, pattern));
   }
 
   if (target === "velocity") {
-    track.velocity = mutateVelocity(track);
+    track.steps = mutateVelocity(track);
   }
+
+  track.lastMutatedTarget = target;
 
   return {
     ...snapshot,

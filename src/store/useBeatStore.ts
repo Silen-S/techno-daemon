@@ -2,9 +2,9 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { defaultSnapshot } from "@/patterns/defaults";
+import { createSteps, defaultSnapshot, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
-import type { AppSnapshot, ImageTone, MutationInterval, MutationTarget, PresetIntent, TrackId } from "@/types";
+import type { AppSnapshot, ImageTone, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
 
 type BeatStore = AppSnapshot & {
   isPlaying: boolean;
@@ -36,6 +36,27 @@ const snapshotFromState = (state: BeatStore): AppSnapshot => ({
   intent: state.intent,
   moodText: state.moodText,
   imageTone: state.imageTone
+});
+
+type LegacyTrackState = Omit<TrackState, "steps" | "volume"> & {
+  pattern?: boolean[];
+  velocity?: number[];
+  steps?: StepState[];
+  volume?: number;
+};
+
+const normalizeTrack = (track: LegacyTrackState): TrackState => {
+  const { pattern, velocity, steps, volume, ...rest } = track;
+  return {
+    ...rest,
+    volume: volume ?? 0.8,
+    steps: steps?.length === STEPS ? steps.map((step) => ({ ...step })) : createSteps(pattern ?? [], velocity ?? [])
+  };
+};
+
+const normalizeSnapshot = (snapshot: AppSnapshot): AppSnapshot => ({
+  ...snapshot,
+  tracks: snapshot.tracks.map((track) => normalizeTrack(track as LegacyTrackState))
 });
 
 const intentFromText = (text: string): PresetIntent | null => {
@@ -110,7 +131,9 @@ export const useBeatStore = create<BeatStore>()(
             track.id === trackId
               ? {
                   ...track,
-                  pattern: track.pattern.map((step, stepIndex) => (stepIndex === index ? !step : step))
+                  steps: track.steps.map((step, stepIndex) =>
+                    stepIndex === index ? { ...step, enabled: !step.enabled } : step
+                  )
                 }
               : track
           ),
@@ -132,7 +155,7 @@ export const useBeatStore = create<BeatStore>()(
             return {};
           }
 
-          const current = snapshotFromState(state);
+          const current = normalizeSnapshot(snapshotFromState(state));
           return {
             ...mutateSnapshot(current),
             pending: current,
@@ -152,7 +175,7 @@ export const useBeatStore = create<BeatStore>()(
         }),
       reset: () =>
         set({
-          ...defaultSnapshot,
+          ...normalizeSnapshot(defaultSnapshot),
           pending: null,
           history: [],
           activeStep: -1
@@ -168,7 +191,14 @@ export const useBeatStore = create<BeatStore>()(
         intent: state.intent,
         moodText: state.moodText,
         imageTone: state.imageTone
-      })
+      }),
+      merge: (persisted, current) => {
+        const next = {
+          ...current,
+          ...(persisted as Partial<BeatStore>)
+        };
+        return normalizeSnapshot(next as BeatStore) as BeatStore;
+      }
     }
   )
 );

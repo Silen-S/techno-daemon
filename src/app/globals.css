@@ -270,6 +270,10 @@ h2 {
   box-shadow: inset 0 0 0 2px var(--amber), 0 0 18px rgba(217, 181, 108, 0.16);
 }
 
+.step.mutated {
+  border-color: var(--amber);
+}
+
 .trackRow.muted {
   opacity: 0.45;
 }
