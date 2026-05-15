@@ -102,7 +102,7 @@ export class BeatEngine {
   }
 
   private shouldTrigger(track: TrackState, step: number) {
-    return !track.muted && track.pattern[step] && Math.random() <= track.density;
+    return !track.muted && track.pattern[step];
   }
 
   private tick(time: number, step: number) {
