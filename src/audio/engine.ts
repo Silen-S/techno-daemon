@@ -1,4 +1,4 @@
-import type { TrackState } from "@/types";
+import type { TrackId, TrackState } from "@/types";
 
 type ToneModule = typeof import("tone");
 
@@ -12,10 +12,48 @@ type SynthNodes = {
   snare: import("tone").NoiseSynth;
   hat: import("tone").MetalSynth;
   bass: import("tone").MonoSynth;
+  filters: Record<TrackId, import("tone").Filter>;
   channel: import("tone").Channel;
   delay: import("tone").FeedbackDelay;
   reverb: import("tone").Reverb;
 };
+
+type KickPreset = { pitchDecay: number; octaves: number; decay: number; note: string };
+type SnarePreset = { noiseType: "white" | "pink" | "brown"; decay: number; volume: number };
+type HatPreset = { frequency: number; decay: number };
+type BassPreset = { oscillator: "sine" | "square" | "sawtooth" | "fmsquare"; q: number };
+
+const kickPresets: Record<string, KickPreset> = {
+  "909 solid": { pitchDecay: 0.025, octaves: 6, decay: 0.34, note: "C2" },
+  "808 hollow": { pitchDecay: 0.06, octaves: 7, decay: 0.5, note: "C1" },
+  "short thud": { pitchDecay: 0.015, octaves: 4, decay: 0.18, note: "C2" },
+  "rubber low": { pitchDecay: 0.09, octaves: 5, decay: 0.42, note: "A1" }
+};
+
+const snarePresets: Record<string, SnarePreset> = {
+  "dry plate": { noiseType: "white", decay: 0.12, volume: -13 },
+  "clipped clap": { noiseType: "pink", decay: 0.09, volume: -10 },
+  "short noise": { noiseType: "white", decay: 0.06, volume: -12 },
+  "tin hit": { noiseType: "brown", decay: 0.15, volume: -11 }
+};
+
+const hatPresets: Record<string, HatPreset> = {
+  "metal ticks": { frequency: 240, decay: 0.055 },
+  "thin closed": { frequency: 320, decay: 0.035 },
+  "white needle": { frequency: 380, decay: 0.05 },
+  "dust hats": { frequency: 200, decay: 0.09 }
+};
+
+const bassPresets: Record<string, BassPreset> = {
+  "sine pulse": { oscillator: "sine", q: 1.2 },
+  "fm knock": { oscillator: "fmsquare", q: 1.6 },
+  "square sub": { oscillator: "square", q: 1.4 },
+  "cold acid": { oscillator: "sawtooth", q: 6 }
+};
+
+// filter値(0..1)を対数的にカットオフ周波数へ写像する
+const filterFrequency = (value: number, min: number, max: number) =>
+  min * Math.pow(max / min, Math.max(0, Math.min(1, value)));
 
 export class BeatEngine {
   private Tone: ToneModule | null = null;
@@ -26,6 +64,7 @@ export class BeatEngine {
   private step = 0;
   private bar = 0;
   private options: EngineOptions;
+  private appliedSoundIds: Partial<Record<TrackId, string>> = {};
 
   constructor(options: EngineOptions) {
     this.options = options;
@@ -44,17 +83,24 @@ export class BeatEngine {
     const reverb = new this.Tone.Reverb({ decay: 2.8, wet: 0.14 }).connect(channel);
     await reverb.ready;
 
+    const filters: Record<TrackId, import("tone").Filter> = {
+      kick: new this.Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(channel),
+      snare: new this.Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(reverb),
+      hat: new this.Tone.Filter({ type: "lowpass", frequency: 8000, rolloff: -12 }).connect(channel),
+      bass: new this.Tone.Filter({ type: "lowpass", frequency: 1200, rolloff: -24 }).connect(delay)
+    };
+
     const kick = new this.Tone.MembraneSynth({
       pitchDecay: 0.025,
       octaves: 6,
       oscillator: { type: "sine" },
       envelope: { attack: 0.001, decay: 0.34, sustain: 0.01, release: 0.15 }
-    }).connect(channel);
+    }).connect(filters.kick);
 
     const snare = new this.Tone.NoiseSynth({
       noise: { type: "white" },
       envelope: { attack: 0.001, decay: 0.12, sustain: 0.01, release: 0.08 }
-    }).connect(reverb);
+    }).connect(filters.snare);
 
     const hat = new this.Tone.MetalSynth({
       envelope: { attack: 0.001, decay: 0.055, release: 0.015 },
@@ -62,7 +108,7 @@ export class BeatEngine {
       modulationIndex: 18,
       resonance: 2800,
       octaves: 1.2
-    }).connect(channel);
+    }).connect(filters.hat);
     hat.frequency.value = 240;
 
     const bass = new this.Tone.MonoSynth({
@@ -70,10 +116,12 @@ export class BeatEngine {
       filter: { Q: 1.4, type: "lowpass", rolloff: -24 },
       envelope: { attack: 0.002, decay: 0.11, sustain: 0.18, release: 0.06 },
       filterEnvelope: { attack: 0.002, decay: 0.18, sustain: 0.18, release: 0.08, baseFrequency: 80, octaves: 2.4 }
-    }).connect(delay);
+    }).connect(filters.bass);
 
-    this.nodes = { kick, snare, hat, bass, channel, delay, reverb };
+    this.nodes = { kick, snare, hat, bass, filters, channel, delay, reverb };
+    this.appliedSoundIds = {};
     this.Tone.Transport.bpm.value = this.bpm;
+    this.applyTrackSettings();
     this.sequence = new this.Tone.Sequence((time, step) => this.tick(time, step), Array.from({ length: 16 }, (_, i) => i), "16n");
     this.sequence.loop = true;
     this.sequence.start(0);
@@ -85,6 +133,7 @@ export class BeatEngine {
       this.Tone.Transport.bpm.rampTo(bpm, 0.08);
     }
     this.bpm = bpm;
+    this.applyTrackSettings();
   }
 
   async play() {
@@ -110,9 +159,60 @@ export class BeatEngine {
     this.sequence?.dispose();
     this.sequence = null;
     if (this.nodes) {
-      Object.values(this.nodes).forEach((node) => node.dispose());
+      const { filters, ...rest } = this.nodes;
+      Object.values(rest).forEach((node) => node.dispose());
+      Object.values(filters).forEach((node) => node.dispose());
       this.nodes = null;
     }
+  }
+
+  // soundId・filterの変更をシンセパラメータへ反映する
+  private applyTrackSettings() {
+    const nodes = this.nodes;
+    if (!nodes) {
+      return;
+    }
+
+    this.tracks.forEach((track) => {
+      if (track.id === "kick") {
+        nodes.filters.kick.frequency.rampTo(filterFrequency(track.filter, 320, 9000), 0.06);
+        const preset = kickPresets[track.soundId];
+        if (preset && this.appliedSoundIds.kick !== track.soundId) {
+          nodes.kick.set({ pitchDecay: preset.pitchDecay, octaves: preset.octaves, envelope: { decay: preset.decay } });
+          this.appliedSoundIds.kick = track.soundId;
+        }
+      }
+
+      if (track.id === "snare") {
+        nodes.filters.snare.frequency.rampTo(filterFrequency(track.filter, 700, 11000), 0.06);
+        const preset = snarePresets[track.soundId];
+        if (preset && this.appliedSoundIds.snare !== track.soundId) {
+          nodes.snare.set({ noise: { type: preset.noiseType }, envelope: { decay: preset.decay } });
+          nodes.snare.volume.value = preset.volume;
+          this.appliedSoundIds.snare = track.soundId;
+        }
+      }
+
+      if (track.id === "hat") {
+        nodes.filters.hat.frequency.rampTo(filterFrequency(track.filter, 1500, 14000), 0.06);
+        const preset = hatPresets[track.soundId];
+        if (preset && this.appliedSoundIds.hat !== track.soundId) {
+          nodes.hat.set({ envelope: { decay: preset.decay } });
+          nodes.hat.frequency.value = preset.frequency;
+          this.appliedSoundIds.hat = track.soundId;
+        }
+      }
+
+      if (track.id === "bass") {
+        nodes.filters.bass.frequency.rampTo(filterFrequency(track.filter, 90, 3200), 0.06);
+        const preset = bassPresets[track.soundId];
+        if (preset && this.appliedSoundIds.bass !== track.soundId) {
+          nodes.bass.set({ oscillator: { type: preset.oscillator } });
+          nodes.filters.bass.Q.value = preset.q;
+          this.appliedSoundIds.bass = track.soundId;
+        }
+      }
+    });
   }
 
   private shouldTrigger(track: TrackState, step: number) {
@@ -139,27 +239,23 @@ export class BeatEngine {
       }
 
       const velocity = (track.steps[step]?.velocity ?? 0.55) * track.volume;
-      const filterTone = Math.round(220 + track.filter * 5200);
 
       if (track.id === "kick") {
-        const note = track.soundId.includes("808") ? "C1" : "C2";
+        const note = kickPresets[track.soundId]?.note ?? "C2";
         nodes.kick.triggerAttackRelease(note, "16n", time, velocity);
       }
 
       if (track.id === "snare") {
-        nodes.snare.volume.value = track.soundId.includes("clipped") ? -10 : -13;
         nodes.snare.triggerAttackRelease("16n", time, velocity * 0.72);
       }
 
       if (track.id === "hat") {
-        const frequency = track.soundId.includes("white") ? 360 : 240;
-        nodes.hat.frequency.setValueAtTime(frequency, time);
+        const frequency = hatPresets[track.soundId]?.frequency ?? 240;
         nodes.hat.triggerAttackRelease(frequency, "32n", time, velocity * 0.54);
       }
 
       if (track.id === "bass") {
         const notes = ["C2", "C2", "D#2", "C2", "G1", "C2", "A#1", "C2"];
-        nodes.bass.filter.frequency.setValueAtTime(filterTone, time);
         nodes.bass.triggerAttackRelease(notes[Math.floor(step / 2) % notes.length], "16n", time, velocity * 0.65);
       }
     });
