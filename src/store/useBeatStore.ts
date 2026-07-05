@@ -4,10 +4,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
-import type { AppSnapshot, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
+import type { AppSnapshot, AutoAcceptSetting, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
 
 // Accept/Revertの回数に応じてMutation対象の選択確率を学習する係数
 const FEEDBACK_UP = 1.25;
+// 自動Acceptは「聴き続けた=弱い好意」として控えめに扱う
+const FEEDBACK_UP_AUTO = 1.08;
 const FEEDBACK_DOWN = 0.75;
 const FEEDBACK_MIN = 0.25;
 const FEEDBACK_MAX = 4;
@@ -31,7 +33,10 @@ type BeatStore = AppSnapshot & {
   feedback: FeedbackWeights;
   lastMutation: LastMutation | null;
   bar: number;
+  autoAccept: AutoAcceptSetting;
+  pendingSinceBar: number | null;
   setBar: (bar: number) => void;
+  setAutoAccept: (autoAccept: AutoAcceptSetting) => void;
   setPlaying: (isPlaying: boolean) => void;
   setActiveStep: (activeStep: number) => void;
   setBpm: (bpm: number) => void;
@@ -45,7 +50,7 @@ type BeatStore = AppSnapshot & {
   toggleTrackMute: (trackId: TrackId) => void;
   toggleTrackMutation: (trackId: TrackId) => void;
   requestMutation: () => void;
-  acceptMutation: () => void;
+  acceptMutation: (auto?: boolean) => void;
   revertMutation: () => void;
   reset: () => void;
 };
@@ -114,7 +119,10 @@ export const useBeatStore = create<BeatStore>()(
       feedback: {},
       lastMutation: null,
       bar: 0,
+      autoAccept: "4",
+      pendingSinceBar: null,
       setBar: (bar) => set({ bar }),
+      setAutoAccept: (autoAccept) => set({ autoAccept }),
       setPlaying: (isPlaying) => set({ isPlaying }),
       setActiveStep: (activeStep) => set({ activeStep }),
       setBpm: (bpm) => set({ bpm: Math.max(80, Math.min(150, Math.round(bpm))) }),
@@ -200,14 +208,16 @@ export const useBeatStore = create<BeatStore>()(
           return {
             ...result.snapshot,
             pending: current,
+            pendingSinceBar: state.bar,
             lastMutation: { target: result.target, trackId: result.trackId },
             history: [current, ...state.history].slice(0, 8)
           };
         }),
-      acceptMutation: () =>
+      acceptMutation: (auto = false) =>
         set((state) => ({
           pending: null,
-          feedback: adjustFeedback(state.feedback, state.lastMutation, FEEDBACK_UP)
+          pendingSinceBar: null,
+          feedback: adjustFeedback(state.feedback, state.lastMutation, auto ? FEEDBACK_UP_AUTO : FEEDBACK_UP)
         })),
       revertMutation: () =>
         set((state) => {
@@ -217,6 +227,7 @@ export const useBeatStore = create<BeatStore>()(
           return {
             ...state.pending,
             pending: null,
+            pendingSinceBar: null,
             feedback: adjustFeedback(state.feedback, state.lastMutation, FEEDBACK_DOWN)
           };
         }),
@@ -224,6 +235,7 @@ export const useBeatStore = create<BeatStore>()(
         set({
           ...normalizeSnapshot(defaultSnapshot),
           pending: null,
+          pendingSinceBar: null,
           history: [],
           activeStep: -1,
           lastMutation: null
@@ -239,7 +251,8 @@ export const useBeatStore = create<BeatStore>()(
         intent: state.intent,
         moodText: state.moodText,
         imageTone: state.imageTone,
-        feedback: state.feedback
+        feedback: state.feedback,
+        autoAccept: state.autoAccept
       }),
       merge: (persisted, current) => {
         const next = {

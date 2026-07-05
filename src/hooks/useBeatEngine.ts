@@ -25,6 +25,18 @@ export const useBeatEngine = () => {
       onStep: setActiveStep,
       onBar: (bar) => {
         setBar(bar);
+
+        // 未確定の変化が指定ループ数を超えたら自動でAcceptする
+        const store = useBeatStore.getState();
+        if (
+          store.pending &&
+          store.autoAccept !== "off" &&
+          store.pendingSinceBar !== null &&
+          bar - store.pendingSinceBar >= Number(store.autoAccept)
+        ) {
+          store.acceptMutation(true);
+        }
+
         const currentInterval = intervalRef.current;
         if (currentInterval !== "manual" && bar > 0 && bar % Number(currentInterval) === 0) {
           requestMutationRef.current();

@@ -2,6 +2,8 @@ export type TrackId = "kick" | "snare" | "hat" | "bass" | "synth";
 
 export type MutationTarget = "pattern" | "sound" | "filter" | "density" | "velocity";
 export type MutationInterval = "manual" | "4" | "8" | "16";
+// Mutation後に自動でAcceptするまでのループ(小節)数
+export type AutoAcceptSetting = "off" | "2" | "4" | "8";
 
 export type StepState = {
   enabled: boolean;

@@ -4,10 +4,11 @@ import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
 import { chordForBar, KEY_LABEL } from "@/theory/harmony";
-import type { MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
+import type { AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
 const intervals: MutationInterval[] = ["manual", "4", "8", "16"];
+const autoAccepts: AutoAcceptSetting[] = ["off", "2", "4", "8"];
 const intents: PresetIntent[] = ["coding", "relax", "dark", "cyber"];
 
 export function NullbeatApp() {
@@ -151,6 +152,22 @@ export function NullbeatApp() {
           </div>
 
           <div className="panelBlock">
+            <h2>Auto accept</h2>
+            <div className="segments">
+              {autoAccepts.map((setting) => (
+                <button
+                  className={state.autoAccept === setting ? "segment active" : "segment"}
+                  key={setting}
+                  onClick={() => state.setAutoAccept(setting)}
+                  type="button"
+                >
+                  {setting === "off" ? "Off" : `${setting} loops`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="panelBlock">
             <h2>Intent</h2>
             <div className="segments">
               {intents.map((intent) => (
@@ -185,7 +202,7 @@ export function NullbeatApp() {
             <button disabled={!!state.pending} onClick={state.requestMutation} type="button">
               Mutate
             </button>
-            <button disabled={!state.pending} onClick={state.acceptMutation} type="button">
+            <button disabled={!state.pending} onClick={() => state.acceptMutation()} type="button">
               Accept
             </button>
             <button disabled={!state.pending} onClick={state.revertMutation} type="button">
