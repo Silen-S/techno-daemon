@@ -73,11 +73,11 @@ const applyPattern = (track: TrackState, pattern: boolean[]) => ({
   }))
 });
 
-export const mutateSnapshot = (snapshot: AppSnapshot): AppSnapshot => {
+export const mutateSnapshot = (snapshot: AppSnapshot): AppSnapshot | null => {
   const tracks = cloneTracks(snapshot.tracks);
   const enabledTracks = tracks.filter((track) => track.mutationEnabled);
   if (enabledTracks.length === 0 || snapshot.mutationTargets.length === 0) {
-    return snapshot;
+    return null;
   }
 
   const target = pick(snapshot.mutationTargets);

@@ -156,8 +156,12 @@ export const useBeatStore = create<BeatStore>()(
           }
 
           const current = normalizeSnapshot(snapshotFromState(state));
+          const mutated = mutateSnapshot(current);
+          if (!mutated) {
+            return {};
+          }
           return {
-            ...mutateSnapshot(current),
+            ...mutated,
             pending: current,
             history: [current, ...state.history].slice(0, 8)
           };
