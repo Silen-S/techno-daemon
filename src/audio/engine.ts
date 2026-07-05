@@ -90,7 +90,8 @@ export class BeatEngine {
     await this.Tone.start();
 
     const channel = new this.Tone.Channel({ volume: -8 }).toDestination();
-    const delay = new this.Tone.FeedbackDelay("8n.", 0.22).connect(channel);
+    // wetを明示しないと1.0(ディレイ音のみ)になり、接続先の音が丸ごと遅れて聞こえる
+    const delay = new this.Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.22, wet: 0.22 }).connect(channel);
     const reverb = new this.Tone.Reverb({ decay: 2.8, wet: 0.14 }).connect(channel);
     await reverb.ready;
 
@@ -257,13 +258,16 @@ export class BeatEngine {
     }
 
     const nodes = this.nodes;
-    this.options.onStep(step);
     this.step = step;
 
     if (step === 0) {
       this.bar += 1;
       this.options.onBar(this.bar);
     }
+
+    // シーケンサーのコールバックは先読みで早めに呼ばれるため、
+    // 表示更新は実際の発音時刻に合わせて行う
+    this.Tone.Draw.schedule(() => this.options.onStep(step), time);
 
     this.tracks.forEach((track) => {
       if (!this.shouldTrigger(track, step)) {
