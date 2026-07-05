@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
@@ -13,10 +12,6 @@ const intents: PresetIntent[] = ["coding", "relax", "dark", "cyber"];
 export function NullbeatApp() {
   const engineRef = useBeatEngine();
   const state = useBeatStore();
-
-  useEffect(() => {
-    engineRef.current?.update(state.tracks, state.bpm);
-  }, [engineRef, state.bpm, state.tracks]);
 
   const handlePlay = async () => {
     await engineRef.current?.play();

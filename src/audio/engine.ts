@@ -22,6 +22,7 @@ export class BeatEngine {
   private nodes: SynthNodes | null = null;
   private sequence: import("tone").Sequence<number> | null = null;
   private tracks: TrackState[] = [];
+  private bpm = 128;
   private step = 0;
   private bar = 0;
   private options: EngineOptions;
@@ -41,6 +42,7 @@ export class BeatEngine {
     const channel = new this.Tone.Channel({ volume: -8 }).toDestination();
     const delay = new this.Tone.FeedbackDelay("8n.", 0.22).connect(channel);
     const reverb = new this.Tone.Reverb({ decay: 2.8, wet: 0.14 }).connect(channel);
+    await reverb.ready;
 
     const kick = new this.Tone.MembraneSynth({
       pitchDecay: 0.025,
@@ -71,6 +73,7 @@ export class BeatEngine {
     }).connect(delay);
 
     this.nodes = { kick, snare, hat, bass, channel, delay, reverb };
+    this.Tone.Transport.bpm.value = this.bpm;
     this.sequence = new this.Tone.Sequence((time, step) => this.tick(time, step), Array.from({ length: 16 }, (_, i) => i), "16n");
     this.sequence.loop = true;
     this.sequence.start(0);
@@ -78,9 +81,10 @@ export class BeatEngine {
 
   update(tracks: TrackState[], bpm: number) {
     this.tracks = tracks;
-    if (this.Tone) {
+    if (this.Tone && this.bpm !== bpm) {
       this.Tone.Transport.bpm.rampTo(bpm, 0.08);
     }
+    this.bpm = bpm;
   }
 
   async play() {
@@ -99,9 +103,15 @@ export class BeatEngine {
   }
 
   dispose() {
+    if (this.Tone) {
+      this.Tone.Transport.stop();
+      this.Tone.Transport.cancel();
+    }
     this.sequence?.dispose();
+    this.sequence = null;
     if (this.nodes) {
       Object.values(this.nodes).forEach((node) => node.dispose());
+      this.nodes = null;
     }
   }
 
