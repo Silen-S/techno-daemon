@@ -1,6 +1,12 @@
 import { STEPS } from "@/patterns/defaults";
 import { MELODY_POOL } from "@/theory/harmony";
-import type { AppSnapshot, MutationTarget, PresetIntent, TrackState } from "@/types";
+import type { AppSnapshot, FeedbackWeights, MutationTarget, PresetIntent, TrackState } from "@/types";
+
+export type MutationResult = {
+  snapshot: AppSnapshot;
+  target: MutationTarget;
+  trackId: TrackState["id"];
+};
 
 const soundPools: Record<TrackState["id"], string[]> = {
   kick: ["909 solid", "808 hollow", "short thud", "rubber low"],
@@ -45,6 +51,20 @@ const intentAdjustments: Record<PresetIntent, Partial<Record<MutationTarget, num
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 const pick = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
+
+// フィードバック重みに従ってMutation対象を抽選する
+const weightedPickTarget = (targets: MutationTarget[], weights: FeedbackWeights) => {
+  const entries = targets.map((target) => ({ target, weight: weights[target] ?? 1 }));
+  const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+  let roll = Math.random() * total;
+  for (const entry of entries) {
+    roll -= entry.weight;
+    if (roll <= 0) {
+      return entry.target;
+    }
+  }
+  return entries[entries.length - 1].target;
+};
 
 const cloneTracks = (tracks: TrackState[]): TrackState[] =>
   tracks.map((track) => ({
@@ -142,14 +162,14 @@ const applyDensity = (track: TrackState) => {
   return withAnchors(euclidean(hits, rotate), track.id);
 };
 
-export const mutateSnapshot = (snapshot: AppSnapshot): AppSnapshot | null => {
+export const mutateSnapshot = (snapshot: AppSnapshot, feedback: FeedbackWeights = {}): MutationResult | null => {
   const tracks = cloneTracks(snapshot.tracks);
   const enabledTracks = tracks.filter((track) => track.mutationEnabled);
   if (enabledTracks.length === 0 || snapshot.mutationTargets.length === 0) {
     return null;
   }
 
-  const target = pick(snapshot.mutationTargets);
+  const target = weightedPickTarget(snapshot.mutationTargets, feedback);
   const track = pick(enabledTracks);
   const adjustment = intentAdjustments[snapshot.intent][target] ?? 0;
 
@@ -184,7 +204,11 @@ export const mutateSnapshot = (snapshot: AppSnapshot): AppSnapshot | null => {
   track.lastMutatedTarget = target;
 
   return {
-    ...snapshot,
-    tracks
+    snapshot: {
+      ...snapshot,
+      tracks
+    },
+    target,
+    trackId: track.id
   };
 };

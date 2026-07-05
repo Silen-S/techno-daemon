@@ -26,6 +26,14 @@ export type TrackState = {
   steps: StepState[];
 };
 
+// Accept/Revertのフィードバックから学習する、Mutation対象ごとの選択重み
+export type FeedbackWeights = Partial<Record<MutationTarget, number>>;
+
+export type LastMutation = {
+  target: MutationTarget;
+  trackId: TrackId;
+};
+
 export type PresetIntent = "coding" | "relax" | "dark" | "cyber";
 export type ImageTone = "none" | "blue" | "red" | "dark" | "bright";
 
