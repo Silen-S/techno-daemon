@@ -1,3 +1,4 @@
+import { bassNoteForStep, chordForBar } from "@/theory/harmony";
 import type { TrackId, TrackState } from "@/types";
 
 type ToneModule = typeof import("tone");
@@ -255,8 +256,8 @@ export class BeatEngine {
       }
 
       if (track.id === "bass") {
-        const notes = ["C2", "C2", "D#2", "C2", "G1", "C2", "A#1", "C2"];
-        nodes.bass.triggerAttackRelease(notes[Math.floor(step / 2) % notes.length], "16n", time, velocity * 0.65);
+        const chord = chordForBar(Math.max(this.bar, 1));
+        nodes.bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.65);
       }
     });
   }
