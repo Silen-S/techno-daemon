@@ -32,11 +32,12 @@ const kickPresets: Record<string, KickPreset> = {
   "rubber low": { pitchDecay: 0.09, octaves: 5, decay: 0.42, note: "A1" }
 };
 
+// ノイズ源はローパス後のピークが低いため、他トラックより高めの音量に設定する
 const snarePresets: Record<string, SnarePreset> = {
-  "dry plate": { noiseType: "white", decay: 0.12, volume: -13 },
-  "clipped clap": { noiseType: "pink", decay: 0.09, volume: -10 },
-  "short noise": { noiseType: "white", decay: 0.06, volume: -12 },
-  "tin hit": { noiseType: "brown", decay: 0.15, volume: -11 }
+  "dry plate": { noiseType: "white", decay: 0.12, volume: 14 },
+  "clipped clap": { noiseType: "pink", decay: 0.09, volume: 17 },
+  "short noise": { noiseType: "white", decay: 0.06, volume: 15 },
+  "tin hit": { noiseType: "brown", decay: 0.15, volume: 16 }
 };
 
 const hatPresets: Record<string, HatPreset> = {
@@ -141,6 +142,8 @@ export class BeatEngine {
 
     this.nodes = { kick, snare, hat, bass, synth, filters, channel, delay, reverb };
     this.appliedSoundIds = {};
+    // 開発時の出力確認用にToneモジュールを公開する
+    (globalThis as { __toneDebug?: ToneModule }).__toneDebug = this.Tone;
     this.Tone.Transport.bpm.value = this.bpm;
     this.applyTrackSettings();
     this.sequence = new this.Tone.Sequence((time, step) => this.tick(time, step), Array.from({ length: 16 }, (_, i) => i), "16n");
@@ -282,7 +285,7 @@ export class BeatEngine {
       }
 
       if (track.id === "snare") {
-        nodes.snare.triggerAttackRelease("16n", time, velocity * 0.72);
+        nodes.snare.triggerAttackRelease("16n", time, velocity * 0.9);
       }
 
       if (track.id === "hat") {

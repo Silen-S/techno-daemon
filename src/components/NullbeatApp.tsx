@@ -111,6 +111,7 @@ export function NullbeatApp() {
               onMute={() => state.toggleTrackMute(track.id)}
               onMutation={() => state.toggleTrackMutation(track.id)}
               onToggleStep={(index) => state.toggleStep(track.id, index)}
+              onVolume={(volume) => state.setTrackVolume(track.id, volume)}
               track={track}
             />
           ))}
@@ -242,12 +243,14 @@ function TrackRow({
   onMute,
   onMutation,
   onToggleStep,
+  onVolume,
   track
 }: {
   activeStep: number;
   onMute: () => void;
   onMutation: () => void;
   onToggleStep: (index: number) => void;
+  onVolume: (volume: number) => void;
   track: TrackState;
 }) {
   return (
@@ -283,6 +286,16 @@ function TrackRow({
       <div className="trackStats">
         <span>F {Math.round(track.filter * 100)}</span>
         <span>D {Math.round(track.density * 100)}</span>
+        <input
+          aria-label={`${track.name} volume`}
+          className="volumeSlider"
+          max={1}
+          min={0}
+          onChange={(event) => onVolume(Number(event.target.value))}
+          step={0.01}
+          type="range"
+          value={track.volume}
+        />
       </div>
     </div>
   );

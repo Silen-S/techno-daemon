@@ -301,6 +301,14 @@ h2 {
   gap: 4px;
 }
 
+.volumeSlider {
+  accent-color: var(--green);
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
 .sidePanel {
   align-self: start;
   display: grid;

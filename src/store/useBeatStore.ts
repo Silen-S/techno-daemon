@@ -41,6 +41,7 @@ type BeatStore = AppSnapshot & {
   setMutationInterval: (interval: MutationInterval) => void;
   toggleMutationTarget: (target: MutationTarget) => void;
   toggleStep: (trackId: TrackId, index: number) => void;
+  setTrackVolume: (trackId: TrackId, volume: number) => void;
   toggleTrackMute: (trackId: TrackId) => void;
   toggleTrackMutation: (trackId: TrackId) => void;
   requestMutation: () => void;
@@ -168,6 +169,12 @@ export const useBeatStore = create<BeatStore>()(
               : track
           ),
           pending: null
+        })),
+      setTrackVolume: (trackId, volume) =>
+        set((state) => ({
+          tracks: state.tracks.map((track) =>
+            track.id === trackId ? { ...track, volume: Math.max(0, Math.min(1, volume)) } : track
+          )
         })),
       toggleTrackMute: (trackId) =>
         set((state) => ({
