@@ -125,6 +125,11 @@ h2 {
   gap: 12px;
 }
 
+.langToggle {
+  display: flex;
+  gap: 4px;
+}
+
 .primaryButton {
   background: var(--green);
   color: #07100b;

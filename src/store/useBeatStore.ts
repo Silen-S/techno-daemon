@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
+import type { Lang } from "@/i18n/labels";
 import type { AppSnapshot, AutoAcceptSetting, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
 
 // Accept/Revertの回数に応じてMutation対象の選択確率を学習する係数
@@ -35,8 +36,10 @@ type BeatStore = AppSnapshot & {
   bar: number;
   autoAccept: AutoAcceptSetting;
   pendingSinceBar: number | null;
+  lang: Lang;
   setBar: (bar: number) => void;
   setAutoAccept: (autoAccept: AutoAcceptSetting) => void;
+  setLang: (lang: Lang) => void;
   setPlaying: (isPlaying: boolean) => void;
   setActiveStep: (activeStep: number) => void;
   setBpm: (bpm: number) => void;
@@ -121,8 +124,10 @@ export const useBeatStore = create<BeatStore>()(
       bar: 0,
       autoAccept: "4",
       pendingSinceBar: null,
+      lang: "ja",
       setBar: (bar) => set({ bar }),
       setAutoAccept: (autoAccept) => set({ autoAccept }),
+      setLang: (lang) => set({ lang }),
       setPlaying: (isPlaying) => set({ isPlaying }),
       setActiveStep: (activeStep) => set({ activeStep }),
       setBpm: (bpm) => set({ bpm: Math.max(80, Math.min(150, Math.round(bpm))) }),
@@ -252,7 +257,8 @@ export const useBeatStore = create<BeatStore>()(
         moodText: state.moodText,
         imageTone: state.imageTone,
         feedback: state.feedback,
-        autoAccept: state.autoAccept
+        autoAccept: state.autoAccept,
+        lang: state.lang
       }),
       merge: (persisted, current) => {
         const next = {

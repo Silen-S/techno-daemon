@@ -1,6 +1,7 @@
 "use client";
 
 import { useBeatEngine } from "@/hooks/useBeatEngine";
+import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
 import { chordForBar, KEY_LABEL } from "@/theory/harmony";
@@ -10,10 +11,12 @@ const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "densit
 const intervals: MutationInterval[] = ["manual", "4", "8", "16"];
 const autoAccepts: AutoAcceptSetting[] = ["off", "2", "4", "8"];
 const intents: PresetIntent[] = ["coding", "relax", "dark", "cyber"];
+const langs: Lang[] = ["ja", "en"];
 
 export function NullbeatApp() {
   const engineRef = useBeatEngine();
   const state = useBeatStore();
+  const t = labels[state.lang];
 
   const handlePlay = async () => {
     await engineRef.current?.play();
@@ -79,13 +82,25 @@ export function NullbeatApp() {
           <DaemonIcon />
           <div>
             <h1>TECHNO DAEMON</h1>
-            <p>self-evolving generative rave</p>
+            <p>{t.tagline}</p>
           </div>
         </div>
 
         <div className="transportControls">
+          <div className="langToggle" role="group" aria-label="Language">
+            {langs.map((lang) => (
+              <button
+                className={state.lang === lang ? "segment active" : "segment"}
+                key={lang}
+                onClick={() => state.setLang(lang)}
+                type="button"
+              >
+                {lang.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <button className="primaryButton" onClick={state.isPlaying ? handleStop : handlePlay} type="button">
-            {state.isPlaying ? "Stop" : "Play"}
+            {state.isPlaying ? t.stop : t.play}
           </button>
           <label className="bpmControl">
             <span>BPM</span>
@@ -109,6 +124,7 @@ export function NullbeatApp() {
             <TrackRow
               activeStep={state.activeStep}
               key={track.id}
+              lang={state.lang}
               onMute={() => state.toggleTrackMute(track.id)}
               onMutation={() => state.toggleTrackMutation(track.id)}
               onToggleStep={(index) => state.toggleStep(track.id, index)}
@@ -120,7 +136,7 @@ export function NullbeatApp() {
 
         <aside className="sidePanel">
           <div className="panelBlock">
-            <h2>Mutation</h2>
+            <h2>{t.mutationHeading}</h2>
             <div className="segmentGrid">
               {mutationTargets.map((target) => (
                 <button
@@ -129,14 +145,14 @@ export function NullbeatApp() {
                   onClick={() => state.toggleMutationTarget(target)}
                   type="button"
                 >
-                  {target}
+                  {t.targets[target]}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="panelBlock">
-            <h2>Timing</h2>
+            <h2>{t.timingHeading}</h2>
             <div className="segments">
               {intervals.map((interval) => (
                 <button
@@ -145,14 +161,14 @@ export function NullbeatApp() {
                   onClick={() => state.setMutationInterval(interval)}
                   type="button"
                 >
-                  {interval === "manual" ? "Manual" : `${interval} bars`}
+                  {t.interval(interval)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="panelBlock">
-            <h2>Auto accept</h2>
+            <h2>{t.autoAcceptHeading}</h2>
             <div className="segments">
               {autoAccepts.map((setting) => (
                 <button
@@ -161,14 +177,14 @@ export function NullbeatApp() {
                   onClick={() => state.setAutoAccept(setting)}
                   type="button"
                 >
-                  {setting === "off" ? "Off" : `${setting} loops`}
+                  {t.autoAccept(setting)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="panelBlock">
-            <h2>Intent</h2>
+            <h2>{t.intentHeading}</h2>
             <div className="segments">
               {intents.map((intent) => (
                 <button
@@ -177,62 +193,68 @@ export function NullbeatApp() {
                   onClick={() => state.setIntent(intent)}
                   type="button"
                 >
-                  {intent}
+                  {t.intents[intent]}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="panelBlock">
-            <h2>Input</h2>
+            <h2>{t.inputHeading}</h2>
             <input
               className="textInput"
               onChange={(event) => state.setMoodText(event.target.value)}
-              placeholder="coding / relax / dark / cyber"
+              placeholder={t.moodPlaceholder}
               type="text"
               value={state.moodText}
             />
             <label className="fileInput">
-              <span>Image tone: {state.imageTone}</span>
+              <span>
+                {t.imageTone}: {t.tones[state.imageTone]}
+              </span>
               <input accept="image/*" onChange={(event) => handleImage(event.target.files?.[0])} type="file" />
             </label>
           </div>
 
           <div className="actionStack">
             <button disabled={!!state.pending} onClick={state.requestMutation} type="button">
-              Mutate
+              {t.mutate}
             </button>
             <button disabled={!state.pending} onClick={() => state.acceptMutation()} type="button">
-              Accept
+              {t.accept}
             </button>
             <button disabled={!state.pending} onClick={state.revertMutation} type="button">
-              Revert
+              {t.revert}
             </button>
             <button onClick={state.reset} type="button">
-              Reset
+              {t.reset}
             </button>
           </div>
 
           <div className="monitor" aria-label="Current state">
-            <span>{state.isPlaying ? "RUNNING" : "IDLE"}</span>
-            <span>STEP {state.activeStep < 0 ? "--" : String(state.activeStep + 1).padStart(2, "0")}</span>
+            <span>{state.isPlaying ? t.running : t.idle}</span>
             <span>
-              KEY {KEY_LABEL} · {chord.name} ({chord.degree})
+              {t.stepLabel} {state.activeStep < 0 ? "--" : String(state.activeStep + 1).padStart(2, "0")}
             </span>
-            <span>BAR {state.bar > 0 ? state.bar : "--"}</span>
+            <span>
+              {t.keyLabel} {KEY_LABEL} · {chord.name} ({chord.degree})
+            </span>
+            <span>
+              {t.barLabel} {state.bar > 0 ? state.bar : "--"}
+            </span>
             {state.lastMutation ? (
               <span>
-                LAST {state.lastMutation.trackId} / {state.lastMutation.target}
+                {t.lastLabel} {t.tracks[state.lastMutation.trackId]} / {t.targets[state.lastMutation.target]}
               </span>
             ) : null}
-            <span>{state.pending ? "UNCOMMITTED" : "LOCKED"}</span>
+            <span>{state.pending ? t.uncommitted : t.locked}</span>
           </div>
 
           <div className="monitor" aria-label="Learned weights">
-            <span>LEARNED BIAS</span>
+            <span>{t.learnedBias}</span>
             {mutationTargets.map((target) => (
               <span key={target}>
-                {target} ×{(state.feedback[target] ?? 1).toFixed(2)}
+                {t.targets[target]} ×{(state.feedback[target] ?? 1).toFixed(2)}
               </span>
             ))}
           </div>
@@ -264,6 +286,7 @@ function StepHeader({ activeStep }: { activeStep: number }) {
 
 function TrackRow({
   activeStep,
+  lang,
   onMute,
   onMutation,
   onToggleStep,
@@ -271,22 +294,36 @@ function TrackRow({
   track
 }: {
   activeStep: number;
+  lang: Lang;
   onMute: () => void;
   onMutation: () => void;
   onToggleStep: (index: number) => void;
   onVolume: (volume: number) => void;
   track: TrackState;
 }) {
+  const t = labels[lang];
+  const trackName = t.tracks[track.id];
+
   return (
     <div className={track.muted ? "trackRow muted" : "trackRow"}>
       <div className="trackMeta">
-        <strong>{track.name}</strong>
+        <strong>{trackName}</strong>
         <span>{track.soundId}</span>
         <div className="trackToggles">
-          <button className={track.muted ? "mini active" : "mini"} onClick={onMute} type="button">
+          <button
+            className={track.muted ? "mini active" : "mini"}
+            onClick={onMute}
+            title={t.muteTooltip}
+            type="button"
+          >
             M
           </button>
-          <button className={track.mutationEnabled ? "mini active" : "mini"} onClick={onMutation} type="button">
+          <button
+            className={track.mutationEnabled ? "mini active" : "mini"}
+            onClick={onMutation}
+            title={t.mutationTooltip}
+            type="button"
+          >
             μ
           </button>
         </div>
@@ -295,7 +332,7 @@ function TrackRow({
       <div className="steps">
         {track.steps.map((step, index) => (
           <button
-            aria-label={`${track.name} step ${index + 1}`}
+            aria-label={`${trackName} step ${index + 1}`}
             className={[step.enabled ? "step on" : "step", activeStep === index ? "playing" : "", step.lastMutated ? "mutated" : ""].join(" ")}
             key={`${track.id}-${index}`}
             onClick={() => onToggleStep(index)}
@@ -311,12 +348,13 @@ function TrackRow({
         <span>F {Math.round(track.filter * 100)}</span>
         <span>D {Math.round(track.density * 100)}</span>
         <input
-          aria-label={`${track.name} volume`}
+          aria-label={`${trackName} volume`}
           className="volumeSlider"
           max={1}
           min={0}
           onChange={(event) => onVolume(Number(event.target.value))}
           step={0.01}
+          title={t.volumeTooltip}
           type="range"
           value={track.volume}
         />
