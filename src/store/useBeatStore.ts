@@ -30,6 +30,8 @@ type BeatStore = AppSnapshot & {
   history: AppSnapshot[];
   feedback: FeedbackWeights;
   lastMutation: LastMutation | null;
+  bar: number;
+  setBar: (bar: number) => void;
   setPlaying: (isPlaying: boolean) => void;
   setActiveStep: (activeStep: number) => void;
   setBpm: (bpm: number) => void;
@@ -110,6 +112,8 @@ export const useBeatStore = create<BeatStore>()(
       history: [],
       feedback: {},
       lastMutation: null,
+      bar: 0,
+      setBar: (bar) => set({ bar }),
       setPlaying: (isPlaying) => set({ isPlaying }),
       setActiveStep: (activeStep) => set({ activeStep }),
       setBpm: (bpm) => set({ bpm: Math.max(80, Math.min(150, Math.round(bpm))) }),

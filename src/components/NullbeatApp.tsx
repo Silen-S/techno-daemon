@@ -3,6 +3,7 @@
 import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
+import { chordForBar, KEY_LABEL } from "@/theory/harmony";
 import type { MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
@@ -21,7 +22,10 @@ export function NullbeatApp() {
   const handleStop = () => {
     engineRef.current?.stop();
     state.setPlaying(false);
+    state.setBar(0);
   };
+
+  const chord = chordForBar(Math.max(state.bar, 1));
 
   const handleImage = async (file: File | undefined) => {
     if (!file) {
@@ -194,7 +198,25 @@ export function NullbeatApp() {
           <div className="monitor" aria-label="Current state">
             <span>{state.isPlaying ? "RUNNING" : "IDLE"}</span>
             <span>STEP {state.activeStep < 0 ? "--" : String(state.activeStep + 1).padStart(2, "0")}</span>
+            <span>
+              KEY {KEY_LABEL} · {chord.name} ({chord.degree})
+            </span>
+            <span>BAR {state.bar > 0 ? state.bar : "--"}</span>
+            {state.lastMutation ? (
+              <span>
+                LAST {state.lastMutation.trackId} / {state.lastMutation.target}
+              </span>
+            ) : null}
             <span>{state.pending ? "UNCOMMITTED" : "LOCKED"}</span>
+          </div>
+
+          <div className="monitor" aria-label="Learned weights">
+            <span>LEARNED BIAS</span>
+            {mutationTargets.map((target) => (
+              <span key={target}>
+                {target} ×{(state.feedback[target] ?? 1).toFixed(2)}
+              </span>
+            ))}
           </div>
         </aside>
       </section>

@@ -12,6 +12,7 @@ export const useBeatEngine = () => {
   const bpm = useBeatStore((state) => state.bpm);
   const interval = useBeatStore((state) => state.mutationInterval);
   const setActiveStep = useBeatStore((state) => state.setActiveStep);
+  const setBar = useBeatStore((state) => state.setBar);
   const requestMutation = useBeatStore((state) => state.requestMutation);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export const useBeatEngine = () => {
     engineRef.current = new BeatEngine({
       onStep: setActiveStep,
       onBar: (bar) => {
+        setBar(bar);
         const currentInterval = intervalRef.current;
         if (currentInterval !== "manual" && bar > 0 && bar % Number(currentInterval) === 0) {
           requestMutationRef.current();
@@ -34,7 +36,7 @@ export const useBeatEngine = () => {
       engineRef.current?.dispose();
       engineRef.current = null;
     };
-  }, [setActiveStep]);
+  }, [setActiveStep, setBar]);
 
   useEffect(() => {
     engineRef.current?.update(tracks, bpm);
