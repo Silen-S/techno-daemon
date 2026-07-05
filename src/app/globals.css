@@ -274,6 +274,22 @@ h2 {
   border-color: var(--amber);
 }
 
+.noteLabel {
+  color: #bfe8cd;
+  font-size: 9px;
+  font-weight: 700;
+  inset: auto 0 2px;
+  letter-spacing: 0;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  z-index: 1;
+}
+
+.step:not(.on) .noteLabel {
+  color: #5a655f;
+}
+
 .trackRow.muted {
   opacity: 0.45;
 }

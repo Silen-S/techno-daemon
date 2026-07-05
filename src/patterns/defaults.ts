@@ -5,10 +5,11 @@ export const STEPS = 16;
 export const createVelocity = (base: number, accents: number[] = []) =>
   Array.from({ length: STEPS }, (_, index) => (accents.includes(index) ? Math.min(base + 0.22, 1) : base));
 
-export const createSteps = (pattern: boolean[], velocity: number[]): StepState[] =>
+export const createSteps = (pattern: boolean[], velocity: number[], notes?: (string | undefined)[]): StepState[] =>
   Array.from({ length: STEPS }, (_, index) => ({
     enabled: pattern[index] ?? false,
-    velocity: velocity[index] ?? 0.5
+    velocity: velocity[index] ?? 0.5,
+    ...(notes?.[index] ? { note: notes[index] } : {})
   }));
 
 export const defaultTracks: TrackState[] = [
@@ -66,6 +67,22 @@ export const defaultTracks: TrackState[] = [
     steps: createSteps(
       [true, false, false, true, false, false, true, false, true, false, false, true, false, false, false, false],
       createVelocity(0.58, [0, 8])
+    )
+  },
+  {
+    id: "synth",
+    name: "Synth",
+    soundId: "saw stab",
+    filter: 0.62,
+    density: 0.38,
+    volume: 0.68,
+    muted: false,
+    mutationEnabled: true,
+    steps: createSteps(
+      [true, false, false, true, false, false, true, false, true, false, false, true, false, false, true, false],
+      createVelocity(0.5, [0, 6]),
+      // Aマイナーペンタトニック内のフレーズ。OFFのステップにも音を持たせ、ONにした時に破綻しないようにする
+      ["E4", "D4", "C4", "G4", "E4", "D4", "A4", "G4", "E4", "D4", "C4", "D4", "E4", "G4", "C4", "D4"]
     )
   }
 ];

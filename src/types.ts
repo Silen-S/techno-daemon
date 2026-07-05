@@ -1,4 +1,4 @@
-export type TrackId = "kick" | "snare" | "hat" | "bass";
+export type TrackId = "kick" | "snare" | "hat" | "bass" | "synth";
 
 export type MutationTarget = "pattern" | "sound" | "filter" | "density" | "velocity";
 export type MutationInterval = "manual" | "4" | "8" | "16";

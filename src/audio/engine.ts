@@ -13,6 +13,7 @@ type SynthNodes = {
   snare: import("tone").NoiseSynth;
   hat: import("tone").MetalSynth;
   bass: import("tone").MonoSynth;
+  synth: import("tone").MonoSynth;
   filters: Record<TrackId, import("tone").Filter>;
   channel: import("tone").Channel;
   delay: import("tone").FeedbackDelay;
@@ -52,6 +53,15 @@ const bassPresets: Record<string, BassPreset> = {
   "cold acid": { oscillator: "sawtooth", q: 6 }
 };
 
+type LeadPreset = { oscillator: "sawtooth" | "square" | "triangle" | "fatsawtooth"; decay: number; sustain: number };
+
+const leadPresets: Record<string, LeadPreset> = {
+  "saw stab": { oscillator: "sawtooth", decay: 0.18, sustain: 0.12 },
+  "square lead": { oscillator: "square", decay: 0.16, sustain: 0.3 },
+  "soft pluck": { oscillator: "triangle", decay: 0.12, sustain: 0.02 },
+  hoover: { oscillator: "fatsawtooth", decay: 0.22, sustain: 0.25 }
+};
+
 // filter値(0..1)を対数的にカットオフ周波数へ写像する
 const filterFrequency = (value: number, min: number, max: number) =>
   min * Math.pow(max / min, Math.max(0, Math.min(1, value)));
@@ -88,7 +98,8 @@ export class BeatEngine {
       kick: new this.Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(channel),
       snare: new this.Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(reverb),
       hat: new this.Tone.Filter({ type: "lowpass", frequency: 8000, rolloff: -12 }).connect(channel),
-      bass: new this.Tone.Filter({ type: "lowpass", frequency: 1200, rolloff: -24 }).connect(delay)
+      bass: new this.Tone.Filter({ type: "lowpass", frequency: 1200, rolloff: -24 }).connect(delay),
+      synth: new this.Tone.Filter({ type: "lowpass", frequency: 2600, rolloff: -12 }).connect(delay)
     };
 
     const kick = new this.Tone.MembraneSynth({
@@ -119,7 +130,15 @@ export class BeatEngine {
       filterEnvelope: { attack: 0.002, decay: 0.18, sustain: 0.18, release: 0.08, baseFrequency: 80, octaves: 2.4 }
     }).connect(filters.bass);
 
-    this.nodes = { kick, snare, hat, bass, filters, channel, delay, reverb };
+    const synth = new this.Tone.MonoSynth({
+      volume: -6,
+      oscillator: { type: "sawtooth" },
+      filter: { Q: 1.1, type: "lowpass", rolloff: -12 },
+      envelope: { attack: 0.004, decay: 0.18, sustain: 0.12, release: 0.12 },
+      filterEnvelope: { attack: 0.004, decay: 0.16, sustain: 0.3, release: 0.14, baseFrequency: 400, octaves: 3 }
+    }).connect(filters.synth);
+
+    this.nodes = { kick, snare, hat, bass, synth, filters, channel, delay, reverb };
     this.appliedSoundIds = {};
     this.Tone.Transport.bpm.value = this.bpm;
     this.applyTrackSettings();
@@ -213,6 +232,18 @@ export class BeatEngine {
           this.appliedSoundIds.bass = track.soundId;
         }
       }
+
+      if (track.id === "synth") {
+        nodes.filters.synth.frequency.rampTo(filterFrequency(track.filter, 400, 9000), 0.06);
+        const preset = leadPresets[track.soundId];
+        if (preset && this.appliedSoundIds.synth !== track.soundId) {
+          nodes.synth.set({
+            oscillator: { type: preset.oscillator },
+            envelope: { decay: preset.decay, sustain: preset.sustain }
+          });
+          this.appliedSoundIds.synth = track.soundId;
+        }
+      }
     });
   }
 
@@ -258,6 +289,11 @@ export class BeatEngine {
       if (track.id === "bass") {
         const chord = chordForBar(Math.max(this.bar, 1));
         nodes.bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.65);
+      }
+
+      if (track.id === "synth") {
+        const note = track.steps[step]?.note ?? "A3";
+        nodes.synth.triggerAttackRelease(note, "16n", time, velocity * 0.6);
       }
     });
   }

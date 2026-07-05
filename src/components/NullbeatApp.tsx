@@ -252,7 +252,9 @@ function TrackRow({
             onClick={() => onToggleStep(index)}
             style={{ "--velocity": step.velocity } as React.CSSProperties}
             type="button"
-          />
+          >
+            {step.note && step.enabled ? <span className="noteLabel">{step.note}</span> : null}
+          </button>
         ))}
       </div>
 

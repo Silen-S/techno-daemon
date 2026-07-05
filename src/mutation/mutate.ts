@@ -5,7 +5,8 @@ const soundPools: Record<TrackState["id"], string[]> = {
   kick: ["909 solid", "808 hollow", "short thud", "rubber low"],
   snare: ["dry plate", "clipped clap", "short noise", "tin hit"],
   hat: ["metal ticks", "thin closed", "white needle", "dust hats"],
-  bass: ["sine pulse", "fm knock", "square sub", "cold acid"]
+  bass: ["sine pulse", "fm knock", "square sub", "cold acid"],
+  synth: ["saw stab", "square lead", "soft pluck", "hoover"]
 };
 
 const intentAdjustments: Record<PresetIntent, Partial<Record<MutationTarget, number>>> = {

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { createSteps, defaultSnapshot, STEPS } from "@/patterns/defaults";
+import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
 import type { AppSnapshot, ImageTone, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
 
@@ -54,10 +54,15 @@ const normalizeTrack = (track: LegacyTrackState): TrackState => {
   };
 };
 
-const normalizeSnapshot = (snapshot: AppSnapshot): AppSnapshot => ({
-  ...snapshot,
-  tracks: snapshot.tracks.map((track) => normalizeTrack(track as LegacyTrackState))
-});
+const normalizeSnapshot = (snapshot: AppSnapshot): AppSnapshot => {
+  const tracks = snapshot.tracks.map((track) => normalizeTrack(track as LegacyTrackState));
+  // 旧バージョンの保存データに存在しないトラック(synthなど)をデフォルトから補完する
+  const missing = defaultTracks.filter((track) => !tracks.some((item) => item.id === track.id));
+  return {
+    ...snapshot,
+    tracks: [...tracks, ...missing.map((track) => normalizeTrack(track as LegacyTrackState))]
+  };
+};
 
 const intentFromText = (text: string): PresetIntent | null => {
   const value = text.toLowerCase();
