@@ -76,10 +76,10 @@ export function NullbeatApp() {
     <main className="shell">
       <section className="transport" aria-label="Transport">
         <div className="identity">
-          <span className="signal" aria-hidden="true" />
+          <DaemonIcon />
           <div>
-            <h1>NULLBEAT</h1>
-            <p>minimal generative techno for deep work</p>
+            <h1>TECHNO DAEMON</h1>
+            <p>self-evolving generative rave</p>
           </div>
         </div>
 
@@ -239,6 +239,13 @@ export function NullbeatApp() {
         </aside>
       </section>
     </main>
+  );
+}
+
+function DaemonIcon() {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt="Techno Daemon" className="daemonIcon" src="/icon.svg" />
   );
 }
 

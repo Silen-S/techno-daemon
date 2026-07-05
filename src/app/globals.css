@@ -84,16 +84,12 @@ button:hover:not(:disabled) {
   gap: 16px;
 }
 
-.signal {
-  aspect-ratio: 1;
-  background:
-    linear-gradient(90deg, transparent 42%, var(--green) 42% 58%, transparent 58%),
-    linear-gradient(0deg, transparent 42%, var(--green) 42% 58%, transparent 58%),
-    #121514;
-  border: 1px solid #4f7560;
+.daemonIcon {
+  border-radius: 10px;
   box-shadow: 0 0 28px rgba(145, 240, 178, 0.16);
   display: block;
-  width: 46px;
+  height: 52px;
+  width: 52px;
 }
 
 h1,
@@ -429,8 +425,9 @@ h2 {
     align-items: flex-start;
   }
 
-  .signal {
-    width: 38px;
+  .daemonIcon {
+    height: 42px;
+    width: 42px;
   }
 
   .bpmControl {

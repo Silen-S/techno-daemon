@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NULLBEAT",
-  description: "A minimal generative techno beat machine for focused work."
+  title: "Techno Daemon",
+  description: "A self-evolving generative rave machine with a daemon's taste."
 };
 
 export default function RootLayout({
