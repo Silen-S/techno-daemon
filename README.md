@@ -63,4 +63,4 @@ src/
 
 ## ライセンス
 
-[MIT](./LICENSE) © 2026 Silent_S
+[MIT](./LICENSE) © 2026 [Silen-S](https://github.com/Silen-S/techno-daemon)
