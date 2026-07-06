@@ -126,6 +126,7 @@ export class BeatEngine {
     hat.frequency.value = 240;
 
     const bass = new this.Tone.MonoSynth({
+      volume: 4,
       oscillator: { type: "square" },
       filter: { Q: 1.4, type: "lowpass", rolloff: -24 },
       envelope: { attack: 0.002, decay: 0.11, sustain: 0.18, release: 0.06 },
@@ -133,7 +134,7 @@ export class BeatEngine {
     }).connect(filters.bass);
 
     const synth = new this.Tone.MonoSynth({
-      volume: -6,
+      volume: 4,
       oscillator: { type: "sawtooth" },
       filter: { Q: 1.1, type: "lowpass", rolloff: -12 },
       envelope: { attack: 0.004, decay: 0.18, sustain: 0.12, release: 0.12 },
@@ -295,12 +296,12 @@ export class BeatEngine {
 
       if (track.id === "bass") {
         const chord = chordForBar(Math.max(this.bar, 1));
-        nodes.bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.65);
+        nodes.bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.9);
       }
 
       if (track.id === "synth") {
         const note = track.steps[step]?.note ?? "A3";
-        nodes.synth.triggerAttackRelease(note, "16n", time, velocity * 0.6);
+        nodes.synth.triggerAttackRelease(note, "16n", time, velocity * 0.85);
       }
     });
   }
