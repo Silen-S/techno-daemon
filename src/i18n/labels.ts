@@ -15,6 +15,11 @@ type Labels = {
   intentHeading: string;
   intents: Record<PresetIntent, string>;
   advancedHeading: string;
+  intentPromptTitle: string;
+  intentPromptKeep: string;
+  intentPromptHeading: string;
+  on: string;
+  off: string;
   inputHeading: string;
   moodPlaceholder: string;
   imageTone: string;
@@ -72,6 +77,11 @@ export const labels: Record<Lang, Labels> = {
       dreamy: "dreamy"
     },
     advancedHeading: "Advanced settings",
+    intentPromptTitle: "Next vibe?",
+    intentPromptKeep: "Keep current",
+    intentPromptHeading: "Vibe suggestions",
+    on: "On",
+    off: "Off",
     inputHeading: "Input",
     moodPlaceholder: "coding / dark / acid / euphoric ...",
     imageTone: "Image tone",
@@ -127,6 +137,11 @@ export const labels: Record<Lang, Labels> = {
       dreamy: "ドリーミー"
     },
     advancedHeading: "詳細設定",
+    intentPromptTitle: "次の雰囲気は？",
+    intentPromptKeep: "このまま",
+    intentPromptHeading: "雰囲気の提案",
+    on: "オン",
+    off: "オフ",
     inputHeading: "入力",
     moodPlaceholder: "coding / dark / acid / euphoric ...",
     imageTone: "画像トーン",

@@ -13,6 +13,19 @@ export type Chord = {
 
 export const KEY_LABEL = "A minor";
 
+export const ALL_INTENTS: PresetIntent[] = [
+  "coding",
+  "relax",
+  "dark",
+  "cyber",
+  "hypnotic",
+  "acid",
+  "dub",
+  "euphoric",
+  "industrial",
+  "dreamy"
+];
+
 const chords = {
   Am: { name: "Am", degree: "i", bassRoot: "A1", bassFifth: "E2", tones: ["A", "C", "E"] },
   Em: { name: "Em", degree: "v", bassRoot: "E1", bassFifth: "B1", tones: ["E", "G", "B"] },

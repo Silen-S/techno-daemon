@@ -15,24 +15,13 @@ import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
-import { chordForBar, KEY_LABEL, progressionCountFor, progressionFor } from "@/theory/harmony";
-import type { AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
+import { ALL_INTENTS, chordForBar, KEY_LABEL, progressionCountFor, progressionFor } from "@/theory/harmony";
+import type { AutoAcceptSetting, MutationInterval, MutationTarget, TrackState } from "@/types";
 
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
 const intervals: MutationInterval[] = ["manual", "4", "8", "16"];
 const autoAccepts: AutoAcceptSetting[] = ["off", "2", "4", "8"];
-const intents: PresetIntent[] = [
-  "coding",
-  "relax",
-  "dark",
-  "cyber",
-  "hypnotic",
-  "acid",
-  "dub",
-  "euphoric",
-  "industrial",
-  "dreamy"
-];
+const intents = ALL_INTENTS;
 
 export function NullbeatApp() {
   const engineRef = useBeatEngine();
@@ -284,6 +273,26 @@ export function NullbeatApp() {
           </div>
 
           <div className="panelBlock">
+            <h2>{t.intentPromptHeading}</h2>
+            <div className="segments">
+              <button
+                className={state.intentPromptEnabled ? "segment active" : "segment"}
+                onClick={() => state.setIntentPromptEnabled(true)}
+                type="button"
+              >
+                {t.on}
+              </button>
+              <button
+                className={!state.intentPromptEnabled ? "segment active" : "segment"}
+                onClick={() => state.setIntentPromptEnabled(false)}
+                type="button"
+              >
+                {t.off}
+              </button>
+            </div>
+          </div>
+
+          <div className="panelBlock">
             <h2>{t.inputHeading}</h2>
             <input
               className="textInput"
@@ -337,6 +346,24 @@ export function NullbeatApp() {
           </div>
         </div>
       </details>
+
+      {state.intentPrompt ? (
+        <div className="promptOverlay" role="dialog" aria-modal="true" aria-label={t.intentPromptTitle}>
+          <div className="promptCard">
+            <h2>{t.intentPromptTitle}</h2>
+            <div className="promptOptions">
+              {state.intentPrompt.map((intent) => (
+                <button className="promptOption" key={intent} onClick={() => state.setIntent(intent)} type="button">
+                  {t.intents[intent]}
+                </button>
+              ))}
+            </div>
+            <button className="promptKeep" onClick={state.closeIntentPrompt} type="button">
+              {t.intentPromptKeep}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

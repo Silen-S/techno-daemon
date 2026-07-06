@@ -5,7 +5,7 @@ import { persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
 import { createMorph, morphTracks, type MorphState } from "@/mutation/transform";
-import { melodyPoolFor, nearestInPool, randomProgressionIndex } from "@/theory/harmony";
+import { ALL_INTENTS, melodyPoolFor, nearestInPool, randomProgressionIndex } from "@/theory/harmony";
 import type { Lang } from "@/i18n/labels";
 import type { AppSnapshot, AutoAcceptSetting, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
 
@@ -40,9 +40,14 @@ type BeatStore = AppSnapshot & {
   pendingSinceBar: number | null;
   lang: Lang;
   morph: MorphState | null;
+  intentPrompt: PresetIntent[] | null;
+  intentPromptEnabled: boolean;
   setBar: (bar: number) => void;
   setAutoAccept: (autoAccept: AutoAcceptSetting) => void;
   setLang: (lang: Lang) => void;
+  setIntentPromptEnabled: (enabled: boolean) => void;
+  openIntentPrompt: () => void;
+  closeIntentPrompt: () => void;
   requestTransform: () => void;
   morphTick: () => void;
   setPlaying: (isPlaying: boolean) => void;
@@ -152,9 +157,27 @@ export const useBeatStore = create<BeatStore>()(
       pendingSinceBar: null,
       lang: "ja",
       morph: null,
+      intentPrompt: null,
+      intentPromptEnabled: true,
       setBar: (bar) => set({ bar }),
       setAutoAccept: (autoAccept) => set({ autoAccept }),
       setLang: (lang) => set({ lang }),
+      setIntentPromptEnabled: (intentPromptEnabled) =>
+        set((state) => ({ intentPromptEnabled, intentPrompt: intentPromptEnabled ? state.intentPrompt : null })),
+      openIntentPrompt: () =>
+        set((state) => {
+          if (state.intentPrompt) {
+            return {};
+          }
+          // 現在の雰囲気を除いて3つ提案する
+          const pool = ALL_INTENTS.filter((intent) => intent !== state.intent);
+          for (let i = pool.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+          }
+          return { intentPrompt: pool.slice(0, 3) };
+        }),
+      closeIntentPrompt: () => set({ intentPrompt: null }),
       requestTransform: () =>
         set((state) => {
           if (state.morph) {
@@ -191,7 +214,9 @@ export const useBeatStore = create<BeatStore>()(
           intent,
           // 雰囲気を変えたら、その雰囲気の進行の中から新しいものを選ぶ
           progressionIndex: randomProgressionIndex(intent),
-          tracks: retuneTracks(state.tracks, intent)
+          tracks: retuneTracks(state.tracks, intent),
+          // 提案ダイアログが開いていれば閉じる
+          intentPrompt: null
         })),
       setMoodText: (moodText) =>
         set((state) => {
@@ -327,7 +352,8 @@ export const useBeatStore = create<BeatStore>()(
         feedback: state.feedback,
         autoAccept: state.autoAccept,
         lang: state.lang,
-        progressionIndex: state.progressionIndex
+        progressionIndex: state.progressionIndex,
+        intentPromptEnabled: state.intentPromptEnabled
       }),
       merge: (persisted, current) => {
         const next = {
@@ -339,3 +365,8 @@ export const useBeatStore = create<BeatStore>()(
     }
   )
 );
+
+// 開発時のデバッグ用にストアを公開する
+if (typeof window !== "undefined") {
+  (window as { __beatStore?: typeof useBeatStore }).__beatStore = useBeatStore;
+}

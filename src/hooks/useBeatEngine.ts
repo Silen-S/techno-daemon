@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 import { BeatEngine } from "@/audio/engine";
 import { useBeatStore } from "@/store/useBeatStore";
 
+// 雰囲気の提案ダイアログを出す間隔(小節)
+const INTENT_PROMPT_BARS = 32;
+
 export const useBeatEngine = () => {
   const engineRef = useRef<BeatEngine | null>(null);
   const intervalRef = useRef(useBeatStore.getState().mutationInterval);
@@ -49,6 +52,11 @@ export const useBeatEngine = () => {
         const currentInterval = intervalRef.current;
         if (currentInterval !== "manual" && bar > 0 && bar % Number(currentInterval) === 0) {
           requestMutationRef.current();
+        }
+
+        // 一定小節ごとに次の雰囲気をダイアログで提案する
+        if (store.intentPromptEnabled && !store.intentPrompt && bar > 0 && bar % INTENT_PROMPT_BARS === 0) {
+          store.openIntentPrompt();
         }
       }
     });
