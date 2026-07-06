@@ -74,6 +74,7 @@ export class BeatEngine {
   private tracks: TrackState[] = [];
   private bpm = 128;
   private intent: PresetIntent = "coding";
+  private progressionIndex = 0;
   private step = 0;
   private bar = 0;
   private options: EngineOptions;
@@ -153,13 +154,14 @@ export class BeatEngine {
     this.sequence.start(0);
   }
 
-  update(tracks: TrackState[], bpm: number, intent: PresetIntent) {
+  update(tracks: TrackState[], bpm: number, intent: PresetIntent, progressionIndex: number) {
     this.tracks = tracks;
     if (this.Tone && this.bpm !== bpm) {
       this.Tone.Transport.bpm.rampTo(bpm, 0.08);
     }
     this.bpm = bpm;
     this.intent = intent;
+    this.progressionIndex = progressionIndex;
     this.applyTrackSettings();
   }
 
@@ -297,7 +299,7 @@ export class BeatEngine {
       }
 
       if (track.id === "bass") {
-        const chord = chordForBar(Math.max(this.bar, 1), this.intent);
+        const chord = chordForBar(Math.max(this.bar, 1), this.intent, this.progressionIndex);
         nodes.bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.9);
       }
 

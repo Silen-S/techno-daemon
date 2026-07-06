@@ -5,7 +5,7 @@ import { persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
 import { createMorph, morphTracks, type MorphState } from "@/mutation/transform";
-import { melodyPoolFor, nearestInPool } from "@/theory/harmony";
+import { melodyPoolFor, nearestInPool, randomProgressionIndex } from "@/theory/harmony";
 import type { Lang } from "@/i18n/labels";
 import type { AppSnapshot, AutoAcceptSetting, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
 
@@ -70,7 +70,8 @@ const snapshotFromState = (state: BeatStore): AppSnapshot => ({
   mutationInterval: state.mutationInterval,
   intent: state.intent,
   moodText: state.moodText,
-  imageTone: state.imageTone
+  imageTone: state.imageTone,
+  progressionIndex: state.progressionIndex
 });
 
 type LegacyTrackState = Omit<TrackState, "steps" | "volume"> & {
@@ -155,6 +156,8 @@ export const useBeatStore = create<BeatStore>()(
           const current = normalizeSnapshot(snapshotFromState(state));
           return {
             morph: createMorph(current),
+            // 曲調を変えるので、コード進行も別のものへ切り替える
+            progressionIndex: randomProgressionIndex(state.intent, state.progressionIndex),
             // 未確定の変化はそのまま取り込んでモーフを開始する
             pending: null,
             pendingSinceBar: null,
@@ -179,6 +182,8 @@ export const useBeatStore = create<BeatStore>()(
       setIntent: (intent) =>
         set((state) => ({
           intent,
+          // 雰囲気を変えたら、その雰囲気の進行の中から新しいものを選ぶ
+          progressionIndex: randomProgressionIndex(intent),
           tracks: retuneTracks(state.tracks, intent)
         })),
       setMoodText: (moodText) =>
@@ -190,6 +195,7 @@ export const useBeatStore = create<BeatStore>()(
           return {
             moodText,
             intent: nextIntent,
+            progressionIndex: randomProgressionIndex(nextIntent),
             tracks: retuneTracks(state.tracks, nextIntent)
           };
         }),
@@ -313,7 +319,8 @@ export const useBeatStore = create<BeatStore>()(
         imageTone: state.imageTone,
         feedback: state.feedback,
         autoAccept: state.autoAccept,
-        lang: state.lang
+        lang: state.lang,
+        progressionIndex: state.progressionIndex
       }),
       merge: (persisted, current) => {
         const next = {

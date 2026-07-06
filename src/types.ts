@@ -47,4 +47,6 @@ export type AppSnapshot = {
   intent: PresetIntent;
   moodText: string;
   imageTone: ImageTone;
+  // 現在の雰囲気の中で選択中のコード進行の番号
+  progressionIndex: number;
 };

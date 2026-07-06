@@ -4,7 +4,7 @@ import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
-import { chordForBar, KEY_LABEL } from "@/theory/harmony";
+import { chordForBar, KEY_LABEL, progressionCountFor, progressionFor } from "@/theory/harmony";
 import type { AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
@@ -29,7 +29,10 @@ export function NullbeatApp() {
     state.setBar(0);
   };
 
-  const chord = chordForBar(Math.max(state.bar, 1), state.intent);
+  const chord = chordForBar(Math.max(state.bar, 1), state.intent, state.progressionIndex);
+  const progression = progressionFor(state.intent, state.progressionIndex);
+  const progressionCount = progressionCountFor(state.intent);
+  const progressionNumber = ((state.progressionIndex % progressionCount) + progressionCount) % progressionCount;
 
   const handleImage = async (file: File | undefined) => {
     if (!file) {
@@ -241,6 +244,9 @@ export function NullbeatApp() {
             </span>
             <span>
               {t.keyLabel} {KEY_LABEL} · {chord.name} ({chord.degree})
+            </span>
+            <span>
+              {t.progressionLabel} {progressionNumber + 1}/{progressionCount} · {progression.label}
             </span>
             <span>
               {t.barLabel} {state.bar > 0 ? state.bar : "--"}

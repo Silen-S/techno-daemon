@@ -17,6 +17,7 @@ const chords = {
   Am: { name: "Am", degree: "i", bassRoot: "A1", bassFifth: "E2", tones: ["A", "C", "E"] },
   Em: { name: "Em", degree: "v", bassRoot: "E1", bassFifth: "B1", tones: ["E", "G", "B"] },
   Dm: { name: "Dm", degree: "iv", bassRoot: "D2", bassFifth: "A2", tones: ["D", "F", "A"] },
+  D: { name: "D", degree: "IV", bassRoot: "D2", bassFifth: "A2", tones: ["D", "F#", "A"] },
   F: { name: "F", degree: "VI", bassRoot: "F1", bassFifth: "C2", tones: ["F", "A", "C"] },
   C: { name: "C", degree: "III", bassRoot: "C2", bassFifth: "G2", tones: ["C", "E", "G"] },
   G: { name: "G", degree: "VII", bassRoot: "G1", bassFifth: "D2", tones: ["G", "B", "D"] },
@@ -24,12 +25,42 @@ const chords = {
   Bb: { name: "Bb", degree: "bII", bassRoot: "Bb1", bassFifth: "F2", tones: ["Bb", "D", "F"] }
 } satisfies Record<string, Chord>;
 
-// Intentごとの進行。darkはフリジアンのbIIとハーモニックマイナーのVで陰影を付ける
-const progressions: Record<PresetIntent, Chord[]> = {
-  coding: [chords.Am, chords.F, chords.C, chords.G],
-  relax: [chords.Am, chords.Em, chords.F, chords.G],
-  dark: [chords.Am, chords.Bb, chords.Am, chords.E],
-  cyber: [chords.Am, chords.C, chords.Dm, chords.E]
+export type Progression = {
+  label: string;
+  chords: Chord[];
+};
+
+const c = chords;
+
+// Intentごとに複数のコード進行を用意し、Transformや雰囲気切替で選び替える。
+// 4小節と8小節を混在させて展開の幅を広げている。
+const progressions: Record<PresetIntent, Progression[]> = {
+  coding: [
+    { label: "i-VI-III-VII", chords: [c.Am, c.F, c.C, c.G] },
+    { label: "i-III-VII-v", chords: [c.Am, c.C, c.G, c.Em] },
+    { label: "i-iv-VII-III", chords: [c.Am, c.Dm, c.G, c.C] },
+    { label: "8bar drive", chords: [c.Am, c.F, c.G, c.Am, c.F, c.C, c.G, c.Em] }
+  ],
+  relax: [
+    { label: "i-v-VI-VII", chords: [c.Am, c.Em, c.F, c.G] },
+    { label: "i-III-VI-III", chords: [c.Am, c.C, c.F, c.C] },
+    { label: "i-VI-iv-v", chords: [c.Am, c.F, c.Dm, c.Em] },
+    { label: "8bar float", chords: [c.Am, c.Em, c.F, c.C, c.Dm, c.Em, c.F, c.G] }
+  ],
+  dark: [
+    // フリジアンのbIIとハーモニックマイナーのVで陰影を付ける
+    { label: "i-bII-i-V", chords: [c.Am, c.Bb, c.Am, c.E] },
+    { label: "i-VI-V", chords: [c.Am, c.F, c.E, c.E] },
+    { label: "Andalusian", chords: [c.Am, c.G, c.F, c.E] },
+    { label: "8bar phrygian", chords: [c.Am, c.Bb, c.F, c.E, c.Am, c.Dm, c.Bb, c.E] }
+  ],
+  cyber: [
+    { label: "i-III-iv-V", chords: [c.Am, c.C, c.Dm, c.E] },
+    { label: "i-VI-III-V", chords: [c.Am, c.F, c.C, c.E] },
+    // D majorはドリアンのリフトでトランス的な高揚感を出す
+    { label: "i-IV-VI-VII", chords: [c.Am, c.D, c.F, c.G] },
+    { label: "8bar rave", chords: [c.Am, c.C, c.G, c.D, c.Dm, c.F, c.G, c.E] }
+  ]
 };
 
 // Intentごとのメロディー音の母集合。darkは低音域+F(短6度)で暗さを出す
@@ -40,11 +71,34 @@ const melodyPools: Record<PresetIntent, string[]> = {
   cyber: ["A3", "B3", "C4", "D4", "E4", "F4", "G4", "A4"]
 };
 
-export const progressionFor = (intent: PresetIntent) => progressions[intent];
 export const melodyPoolFor = (intent: PresetIntent) => melodyPools[intent];
 
-export const chordForBar = (bar: number, intent: PresetIntent): Chord => {
-  const progression = progressions[intent];
+// 雰囲気ごとの進行の本数
+export const progressionCountFor = (intent: PresetIntent) => progressions[intent].length;
+
+const clampIndex = (intent: PresetIntent, index: number) => {
+  const list = progressions[intent];
+  return ((index % list.length) + list.length) % list.length;
+};
+
+export const progressionFor = (intent: PresetIntent, index: number): Progression =>
+  progressions[intent][clampIndex(intent, index)];
+
+// 現在の雰囲気からランダムに別の進行を選ぶ(同じ番号は避ける)
+export const randomProgressionIndex = (intent: PresetIntent, exclude?: number): number => {
+  const count = progressions[intent].length;
+  if (count <= 1) {
+    return 0;
+  }
+  let next = Math.floor(Math.random() * count);
+  while (next === exclude) {
+    next = Math.floor(Math.random() * count);
+  }
+  return next;
+};
+
+export const chordForBar = (bar: number, intent: PresetIntent, progressionIndex: number): Chord => {
+  const progression = progressions[intent][clampIndex(intent, progressionIndex)].chords;
   const index = ((bar - 1) % progression.length + progression.length) % progression.length;
   return progression[index];
 };

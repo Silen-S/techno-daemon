@@ -94,5 +94,6 @@ export const defaultSnapshot: AppSnapshot = {
   mutationInterval: "8",
   intent: "coding",
   moodText: "",
-  imageTone: "none"
+  imageTone: "none",
+  progressionIndex: 0
 };

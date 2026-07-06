@@ -28,6 +28,7 @@ type Labels = {
   idle: string;
   stepLabel: string;
   keyLabel: string;
+  progressionLabel: string;
   barLabel: string;
   lastLabel: string;
   uncommitted: string;
@@ -72,6 +73,7 @@ export const labels: Record<Lang, Labels> = {
     idle: "IDLE",
     stepLabel: "STEP",
     keyLabel: "KEY",
+    progressionLabel: "PROG",
     barLabel: "BAR",
     lastLabel: "LAST",
     uncommitted: "UNCOMMITTED",
@@ -114,6 +116,7 @@ export const labels: Record<Lang, Labels> = {
     idle: "停止中",
     stepLabel: "ステップ",
     keyLabel: "キー",
+    progressionLabel: "進行",
     barLabel: "小節",
     lastLabel: "直近の変化",
     uncommitted: "未確定",
