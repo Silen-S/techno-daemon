@@ -164,54 +164,6 @@ export function NullbeatApp() {
 
         <aside className="sidePanel">
           <div className="panelBlock">
-            <h2>{t.mutationHeading}</h2>
-            <div className="segmentGrid">
-              {mutationTargets.map((target) => (
-                <button
-                  className={state.mutationTargets.includes(target) ? "segment active" : "segment"}
-                  key={target}
-                  onClick={() => state.toggleMutationTarget(target)}
-                  type="button"
-                >
-                  {t.targets[target]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="panelBlock">
-            <h2>{t.timingHeading}</h2>
-            <div className="segments">
-              {intervals.map((interval) => (
-                <button
-                  className={state.mutationInterval === interval ? "segment active" : "segment"}
-                  key={interval}
-                  onClick={() => state.setMutationInterval(interval)}
-                  type="button"
-                >
-                  {t.interval(interval)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="panelBlock">
-            <h2>{t.autoAcceptHeading}</h2>
-            <div className="segments">
-              {autoAccepts.map((setting) => (
-                <button
-                  className={state.autoAccept === setting ? "segment active" : "segment"}
-                  key={setting}
-                  onClick={() => state.setAutoAccept(setting)}
-                  type="button"
-                >
-                  {t.autoAccept(setting)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="panelBlock">
             <h2>{t.intentHeading}</h2>
             <div className="segments">
               {intents.map((intent) => (
@@ -225,23 +177,6 @@ export function NullbeatApp() {
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="panelBlock">
-            <h2>{t.inputHeading}</h2>
-            <input
-              className="textInput"
-              onChange={(event) => state.setMoodText(event.target.value)}
-              placeholder={t.moodPlaceholder}
-              type="text"
-              value={state.moodText}
-            />
-            <label className="fileInput">
-              <span>
-                {t.imageTone}: {t.tones[state.imageTone]}
-              </span>
-              <input accept="image/*" onChange={(event) => handleImage(event.target.files?.[0])} type="file" />
-            </label>
           </div>
 
           <div className="actionStack">
@@ -294,6 +229,76 @@ export function NullbeatApp() {
               <span>{t.revert}</span>
             </button>
           </div>
+        </aside>
+      </section>
+
+      <details className="advanced">
+        <summary>{t.advancedHeading}</summary>
+        <div className="advancedGrid">
+          <div className="panelBlock">
+            <h2>{t.mutationHeading}</h2>
+            <div className="segmentGrid">
+              {mutationTargets.map((target) => (
+                <button
+                  className={state.mutationTargets.includes(target) ? "segment active" : "segment"}
+                  key={target}
+                  onClick={() => state.toggleMutationTarget(target)}
+                  type="button"
+                >
+                  {t.targets[target]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="panelBlock">
+            <h2>{t.timingHeading}</h2>
+            <div className="segments">
+              {intervals.map((interval) => (
+                <button
+                  className={state.mutationInterval === interval ? "segment active" : "segment"}
+                  key={interval}
+                  onClick={() => state.setMutationInterval(interval)}
+                  type="button"
+                >
+                  {t.interval(interval)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="panelBlock">
+            <h2>{t.autoAcceptHeading}</h2>
+            <div className="segments">
+              {autoAccepts.map((setting) => (
+                <button
+                  className={state.autoAccept === setting ? "segment active" : "segment"}
+                  key={setting}
+                  onClick={() => state.setAutoAccept(setting)}
+                  type="button"
+                >
+                  {t.autoAccept(setting)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="panelBlock">
+            <h2>{t.inputHeading}</h2>
+            <input
+              className="textInput"
+              onChange={(event) => state.setMoodText(event.target.value)}
+              placeholder={t.moodPlaceholder}
+              type="text"
+              value={state.moodText}
+            />
+            <label className="fileInput">
+              <span>
+                {t.imageTone}: {t.tones[state.imageTone]}
+              </span>
+              <input accept="image/*" onChange={(event) => handleImage(event.target.files?.[0])} type="file" />
+            </label>
+          </div>
 
           <div className="monitor" aria-label="Current state">
             <span>{state.isPlaying ? t.running : t.idle}</span>
@@ -330,8 +335,8 @@ export function NullbeatApp() {
               </span>
             ))}
           </div>
-        </aside>
-      </section>
+        </div>
+      </details>
     </main>
   );
 }

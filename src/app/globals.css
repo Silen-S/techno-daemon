@@ -339,6 +339,45 @@ h2 {
   padding: 16px;
 }
 
+.advanced {
+  background: rgba(24, 27, 29, 0.9);
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 55px var(--shadow);
+}
+
+.advanced > summary {
+  color: #f0f5f0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  list-style: none;
+  padding: 16px 18px;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced > summary::before {
+  content: "▸ ";
+  color: var(--muted);
+}
+
+.advanced[open] > summary::before {
+  content: "▾ ";
+}
+
+.advancedGrid {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding: 18px;
+}
+
 .panelBlock {
   display: grid;
   gap: 10px;

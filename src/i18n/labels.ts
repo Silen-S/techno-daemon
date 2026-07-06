@@ -14,6 +14,7 @@ type Labels = {
   autoAccept: (setting: AutoAcceptSetting) => string;
   intentHeading: string;
   intents: Record<PresetIntent, string>;
+  advancedHeading: string;
   inputHeading: string;
   moodPlaceholder: string;
   imageTone: string;
@@ -70,6 +71,7 @@ export const labels: Record<Lang, Labels> = {
       industrial: "industrial",
       dreamy: "dreamy"
     },
+    advancedHeading: "Advanced settings",
     inputHeading: "Input",
     moodPlaceholder: "coding / dark / acid / euphoric ...",
     imageTone: "Image tone",
@@ -124,6 +126,7 @@ export const labels: Record<Lang, Labels> = {
       industrial: "インダストリアル",
       dreamy: "ドリーミー"
     },
+    advancedHeading: "詳細設定",
     inputHeading: "入力",
     moodPlaceholder: "coding / dark / acid / euphoric ...",
     imageTone: "画像トーン",
