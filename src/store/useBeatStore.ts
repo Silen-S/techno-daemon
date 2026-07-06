@@ -113,19 +113,26 @@ const retuneTracks = (tracks: TrackState[], intent: PresetIntent): TrackState[] 
   );
 };
 
+// テキスト入力のキーワードから雰囲気を推定する。上から順に評価する
+const intentKeywords: [PresetIntent, string[]][] = [
+  ["hypnotic", ["hypno", "minimal", "trance out", "催眠"]],
+  ["acid", ["acid", "303", "アシッド"]],
+  ["dub", ["dub", "deep", "echo", "ダブ"]],
+  ["euphoric", ["euphor", "uplift", "happy", "多幸", "多幸感"]],
+  ["industrial", ["indust", "harsh", "noise", "インダスト"]],
+  ["dreamy", ["dream", "airy", "ambient dream", "ドリー"]],
+  ["relax", ["relax", "ambient", "chill", "リラック"]],
+  ["dark", ["dark", "lowpass", "ダーク"]],
+  ["cyber", ["cyber", "distortion", "サイバー"]],
+  ["coding", ["coding", "mechanical", "work", "コーディング", "作業"]]
+];
+
 const intentFromText = (text: string): PresetIntent | null => {
   const value = text.toLowerCase();
-  if (value.includes("relax") || value.includes("ambient")) {
-    return "relax";
-  }
-  if (value.includes("dark") || value.includes("lowpass")) {
-    return "dark";
-  }
-  if (value.includes("cyber") || value.includes("distortion")) {
-    return "cyber";
-  }
-  if (value.includes("coding") || value.includes("mechanical") || value.includes("work")) {
-    return "coding";
+  for (const [intent, keywords] of intentKeywords) {
+    if (keywords.some((keyword) => value.includes(keyword))) {
+      return intent;
+    }
   }
   return null;
 };

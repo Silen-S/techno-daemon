@@ -46,7 +46,13 @@ const intentAdjustments: Record<PresetIntent, Partial<Record<MutationTarget, num
   coding: { density: -0.08, filter: 0.08 },
   relax: { density: -0.18, filter: -0.05 },
   dark: { filter: -0.22, sound: 0.2 },
-  cyber: { density: 0.08, velocity: 0.12 }
+  cyber: { density: 0.08, velocity: 0.12 },
+  hypnotic: { density: -0.1 },
+  acid: { filter: 0.1, velocity: 0.08 },
+  dub: { density: -0.14, filter: -0.1 },
+  euphoric: { density: 0.06, filter: 0.12, velocity: 0.1 },
+  industrial: { density: 0.12, filter: -0.15, sound: 0.15 },
+  dreamy: { density: -0.08, filter: 0.15 }
 };
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));

@@ -10,7 +10,18 @@ import type { AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent,
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
 const intervals: MutationInterval[] = ["manual", "4", "8", "16"];
 const autoAccepts: AutoAcceptSetting[] = ["off", "2", "4", "8"];
-const intents: PresetIntent[] = ["coding", "relax", "dark", "cyber"];
+const intents: PresetIntent[] = [
+  "coding",
+  "relax",
+  "dark",
+  "cyber",
+  "hypnotic",
+  "acid",
+  "dub",
+  "euphoric",
+  "industrial",
+  "dreamy"
+];
 const langs: Lang[] = ["ja", "en"];
 
 export function NullbeatApp() {

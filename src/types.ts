@@ -36,7 +36,17 @@ export type LastMutation = {
   trackId: TrackId;
 };
 
-export type PresetIntent = "coding" | "relax" | "dark" | "cyber";
+export type PresetIntent =
+  | "coding"
+  | "relax"
+  | "dark"
+  | "cyber"
+  | "hypnotic"
+  | "acid"
+  | "dub"
+  | "euphoric"
+  | "industrial"
+  | "dreamy";
 export type ImageTone = "none" | "blue" | "red" | "dark" | "bright";
 
 export type AppSnapshot = {

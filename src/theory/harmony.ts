@@ -60,6 +60,39 @@ const progressions: Record<PresetIntent, Progression[]> = {
     // D majorはドリアンのリフトでトランス的な高揚感を出す
     { label: "i-IV-VI-VII", chords: [c.Am, c.D, c.F, c.G] },
     { label: "8bar rave", chords: [c.Am, c.C, c.G, c.D, c.Dm, c.F, c.G, c.E] }
+  ],
+  hypnotic: [
+    // 動きを最小限にして反復による催眠感を出す
+    { label: "i-i-i-v", chords: [c.Am, c.Am, c.Am, c.Em] },
+    { label: "i-i-VI-VI", chords: [c.Am, c.Am, c.F, c.F] },
+    { label: "i-v-i-v", chords: [c.Am, c.Em, c.Am, c.Em] }
+  ],
+  acid: [
+    { label: "i-i-III-VII", chords: [c.Am, c.Am, c.C, c.G] },
+    { label: "i-VII-i-VI", chords: [c.Am, c.G, c.Am, c.F] },
+    { label: "i-III-iv-VII", chords: [c.Am, c.C, c.Dm, c.G] }
+  ],
+  dub: [
+    { label: "i-iv-i-v", chords: [c.Am, c.Dm, c.Am, c.Em] },
+    { label: "i-VI-iv-i", chords: [c.Am, c.F, c.Dm, c.Am] },
+    { label: "i-v-iv-v", chords: [c.Am, c.Em, c.Dm, c.Em] }
+  ],
+  euphoric: [
+    // 平行長調のC durを基準にした高揚感のある進行
+    { label: "III-VII-i-VI", chords: [c.C, c.G, c.Am, c.F] },
+    { label: "VI-III-VII-i", chords: [c.F, c.C, c.G, c.Am] },
+    { label: "8bar lift", chords: [c.Am, c.F, c.C, c.G, c.F, c.C, c.G, c.G] }
+  ],
+  industrial: [
+    // bIIを多用して不穏で機械的な質感を出す
+    { label: "i-bII-i-bII", chords: [c.Am, c.Bb, c.Am, c.Bb] },
+    { label: "i-VI-bII-V", chords: [c.Am, c.F, c.Bb, c.E] },
+    { label: "i-i-bII-V", chords: [c.Am, c.Am, c.Bb, c.E] }
+  ],
+  dreamy: [
+    { label: "i-III-VII-v", chords: [c.Am, c.C, c.G, c.Em] },
+    { label: "i-v-III-VII", chords: [c.Am, c.Em, c.C, c.G] },
+    { label: "VI-III-i-v", chords: [c.F, c.C, c.Am, c.Em] }
   ]
 };
 
@@ -68,7 +101,18 @@ const melodyPools: Record<PresetIntent, string[]> = {
   coding: ["A3", "C4", "D4", "E4", "G4", "A4", "C5"],
   relax: ["E3", "G3", "A3", "C4", "D4", "E4"],
   dark: ["A2", "C3", "D3", "E3", "F3", "G3", "A3"],
-  cyber: ["A3", "B3", "C4", "D4", "E4", "F4", "G4", "A4"]
+  cyber: ["A3", "B3", "C4", "D4", "E4", "F4", "G4", "A4"],
+  // 反復重視で音数を絞る
+  hypnotic: ["A3", "C4", "E4", "A4"],
+  acid: ["A3", "C4", "D4", "E4", "G4", "A4"],
+  // 低め・広がりのあるダブ
+  dub: ["E3", "A3", "C4", "D4", "E4"],
+  // 高域中心で多幸感
+  euphoric: ["C4", "E4", "G4", "A4", "C5", "E5"],
+  // 低域+短2度で不穏
+  industrial: ["A2", "C3", "E3", "F3", "A3", "Bb3"],
+  // 高域の浮遊感
+  dreamy: ["E4", "G4", "A4", "C5", "D5", "E5"]
 };
 
 export const melodyPoolFor = (intent: PresetIntent) => melodyPools[intent];
