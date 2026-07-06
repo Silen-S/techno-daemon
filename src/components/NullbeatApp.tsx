@@ -29,7 +29,7 @@ export function NullbeatApp() {
     state.setBar(0);
   };
 
-  const chord = chordForBar(Math.max(state.bar, 1));
+  const chord = chordForBar(Math.max(state.bar, 1), state.intent);
 
   const handleImage = async (file: File | undefined) => {
     if (!file) {

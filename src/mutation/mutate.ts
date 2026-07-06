@@ -1,5 +1,5 @@
 import { STEPS } from "@/patterns/defaults";
-import { MELODY_POOL } from "@/theory/harmony";
+import { melodyPoolFor } from "@/theory/harmony";
 import type { AppSnapshot, FeedbackWeights, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 export type MutationResult = {
@@ -105,8 +105,8 @@ const mutatePattern = (track: TrackState) => {
   return toggleOneStep(track);
 };
 
-// メロディーの1音をペンタトニック内の隣接音へ動かす
-const mutateMelody = (track: TrackState) => {
+// メロディーの1音をスケールプール内の隣接音へ動かす
+const mutateMelody = (track: TrackState, pool: string[]) => {
   const enabledIndexes = track.steps.map((step, index) => (step.enabled ? index : -1)).filter((index) => index >= 0);
   if (enabledIndexes.length === 0) {
     return track.steps;
@@ -116,12 +116,12 @@ const mutateMelody = (track: TrackState) => {
     if (index !== target) {
       return step;
     }
-    const poolIndex = MELODY_POOL.indexOf(step.note ?? "");
+    const poolIndex = pool.indexOf(step.note ?? "");
     const nextIndex =
       poolIndex < 0
-        ? Math.floor(Math.random() * MELODY_POOL.length)
-        : clamp(poolIndex + pick([-1, 1]), 0, MELODY_POOL.length - 1);
-    return { ...step, note: MELODY_POOL[nextIndex], lastMutated: true };
+        ? Math.floor(Math.random() * pool.length)
+        : clamp(poolIndex + pick([-1, 1]), 0, pool.length - 1);
+    return { ...step, note: pool[nextIndex], lastMutated: true };
   });
 };
 
@@ -139,12 +139,12 @@ const mutateVelocity = (track: TrackState) =>
     };
   });
 
-const applyPattern = (track: TrackState, pattern: boolean[]) => ({
+const applyPattern = (track: TrackState, pattern: boolean[], pool: string[]) => ({
   ...track,
   steps: track.steps.map((step, index) => {
     const enabled = pattern[index] ?? false;
-    // ノートを持たないステップをONにする場合はペンタトニックから補う
-    const note = track.id === "synth" && enabled && !step.note ? pick(MELODY_POOL) : step.note;
+    // ノートを持たないステップをONにする場合はスケールプールから補う
+    const note = track.id === "synth" && enabled && !step.note ? pick(pool) : step.note;
     return {
       ...step,
       enabled,
@@ -172,13 +172,14 @@ export const mutateSnapshot = (snapshot: AppSnapshot, feedback: FeedbackWeights 
   const target = weightedPickTarget(snapshot.mutationTargets, feedback);
   const track = pick(enabledTracks);
   const adjustment = intentAdjustments[snapshot.intent][target] ?? 0;
+  const pool = melodyPoolFor(snapshot.intent);
 
   if (target === "pattern") {
     // シンセはリズム変更とメロディー変更を半々で行う
     if (track.id === "synth" && Math.random() > 0.5) {
-      track.steps = mutateMelody(track);
+      track.steps = mutateMelody(track, pool);
     } else {
-      Object.assign(track, applyPattern(track, mutatePattern(track)));
+      Object.assign(track, applyPattern(track, mutatePattern(track), pool));
     }
   }
 
@@ -194,7 +195,7 @@ export const mutateSnapshot = (snapshot: AppSnapshot, feedback: FeedbackWeights 
 
   if (target === "density") {
     track.density = clamp(track.density + (Math.random() - 0.5) * 0.2 + adjustment, 0.18, 0.96);
-    Object.assign(track, applyPattern(track, applyDensity(track)));
+    Object.assign(track, applyPattern(track, applyDensity(track), pool));
   }
 
   if (target === "velocity") {

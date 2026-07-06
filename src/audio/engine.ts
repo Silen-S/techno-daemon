@@ -1,5 +1,5 @@
 import { bassNoteForStep, chordForBar } from "@/theory/harmony";
-import type { TrackId, TrackState } from "@/types";
+import type { PresetIntent, TrackId, TrackState } from "@/types";
 
 type ToneModule = typeof import("tone");
 
@@ -73,6 +73,7 @@ export class BeatEngine {
   private sequence: import("tone").Sequence<number> | null = null;
   private tracks: TrackState[] = [];
   private bpm = 128;
+  private intent: PresetIntent = "coding";
   private step = 0;
   private bar = 0;
   private options: EngineOptions;
@@ -152,12 +153,13 @@ export class BeatEngine {
     this.sequence.start(0);
   }
 
-  update(tracks: TrackState[], bpm: number) {
+  update(tracks: TrackState[], bpm: number, intent: PresetIntent) {
     this.tracks = tracks;
     if (this.Tone && this.bpm !== bpm) {
       this.Tone.Transport.bpm.rampTo(bpm, 0.08);
     }
     this.bpm = bpm;
+    this.intent = intent;
     this.applyTrackSettings();
   }
 
@@ -295,7 +297,7 @@ export class BeatEngine {
       }
 
       if (track.id === "bass") {
-        const chord = chordForBar(Math.max(this.bar, 1));
+        const chord = chordForBar(Math.max(this.bar, 1), this.intent);
         nodes.bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.9);
       }
 

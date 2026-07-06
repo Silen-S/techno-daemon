@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
+import { melodyPoolFor, nearestInPool } from "@/theory/harmony";
 import type { Lang } from "@/i18n/labels";
 import type { AppSnapshot, AutoAcceptSetting, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
 
@@ -94,6 +95,19 @@ const normalizeSnapshot = (snapshot: AppSnapshot): AppSnapshot => {
   };
 };
 
+// Intent切替時にメロディーを新しい音域プールへ移調する
+const retuneTracks = (tracks: TrackState[], intent: PresetIntent): TrackState[] => {
+  const pool = melodyPoolFor(intent);
+  return tracks.map((track) =>
+    track.id === "synth"
+      ? {
+          ...track,
+          steps: track.steps.map((step) => (step.note ? { ...step, note: nearestInPool(step.note, pool) } : step))
+        }
+      : track
+  );
+};
+
 const intentFromText = (text: string): PresetIntent | null => {
   const value = text.toLowerCase();
   if (value.includes("relax") || value.includes("ambient")) {
@@ -131,13 +145,21 @@ export const useBeatStore = create<BeatStore>()(
       setPlaying: (isPlaying) => set({ isPlaying }),
       setActiveStep: (activeStep) => set({ activeStep }),
       setBpm: (bpm) => set({ bpm: Math.max(80, Math.min(150, Math.round(bpm))) }),
-      setIntent: (intent) => set({ intent }),
+      setIntent: (intent) =>
+        set((state) => ({
+          intent,
+          tracks: retuneTracks(state.tracks, intent)
+        })),
       setMoodText: (moodText) =>
         set((state) => {
           const nextIntent = intentFromText(moodText);
+          if (!nextIntent || nextIntent === state.intent) {
+            return { moodText };
+          }
           return {
             moodText,
-            intent: nextIntent ?? state.intent
+            intent: nextIntent,
+            tracks: retuneTracks(state.tracks, nextIntent)
           };
         }),
       setImageTone: (imageTone) =>

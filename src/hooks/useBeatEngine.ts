@@ -10,6 +10,7 @@ export const useBeatEngine = () => {
   const requestMutationRef = useRef(useBeatStore.getState().requestMutation);
   const tracks = useBeatStore((state) => state.tracks);
   const bpm = useBeatStore((state) => state.bpm);
+  const intent = useBeatStore((state) => state.intent);
   const interval = useBeatStore((state) => state.mutationInterval);
   const setActiveStep = useBeatStore((state) => state.setActiveStep);
   const setBar = useBeatStore((state) => state.setBar);
@@ -51,8 +52,8 @@ export const useBeatEngine = () => {
   }, [setActiveStep, setBar]);
 
   useEffect(() => {
-    engineRef.current?.update(tracks, bpm);
-  }, [tracks, bpm]);
+    engineRef.current?.update(tracks, bpm, intent);
+  }, [tracks, bpm, intent]);
 
   return engineRef;
 };
