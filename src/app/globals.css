@@ -125,9 +125,11 @@ h2 {
   gap: 12px;
 }
 
-.langToggle {
-  display: flex;
-  gap: 4px;
+.iconButton {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
 }
 
 .primaryButton {
@@ -135,6 +137,23 @@ h2 {
   color: #07100b;
   font-weight: 800;
   min-width: 104px;
+}
+
+.primaryButton.iconButton {
+  min-width: 56px;
+  padding: 0 16px;
+}
+
+.langButton {
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 56px;
+  padding: 0 10px;
+}
+
+.langButton span {
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .bpmControl {
@@ -227,10 +246,13 @@ h2 {
 }
 
 .mini {
+  align-items: center;
   color: #76817b;
-  font-size: 12px;
-  min-height: 28px;
-  width: 32px;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0;
+  width: 34px;
 }
 
 .mini.active {
@@ -380,15 +402,34 @@ h2 {
   grid-template-columns: 1fr 1fr;
 }
 
+.actionButton {
+  flex-direction: column;
+  gap: 5px;
+  min-height: 62px;
+  padding: 8px;
+}
+
+.actionButton span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .transformButton {
   border-color: #6b4a8a;
   color: #c9a0f0;
   grid-column: 1 / -1;
+  flex-direction: row;
+  min-height: 52px;
 }
 
-.actionStack button:nth-child(2) {
+.mutateButton {
   border-color: #8a7442;
   color: var(--amber);
+}
+
+.acceptButton {
+  border-color: #4f7560;
+  color: var(--green);
 }
 
 .monitor {

@@ -1,5 +1,16 @@
 "use client";
 
+import {
+  AcceptIcon,
+  GlobeIcon,
+  MutateIcon,
+  MuteIcon,
+  PlayIcon,
+  RevertIcon,
+  StopIcon,
+  TargetIcon,
+  TransformIcon
+} from "@/components/icons";
 import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
@@ -22,7 +33,6 @@ const intents: PresetIntent[] = [
   "industrial",
   "dreamy"
 ];
-const langs: Lang[] = ["ja", "en"];
 
 export function NullbeatApp() {
   const engineRef = useBeatEngine();
@@ -101,20 +111,14 @@ export function NullbeatApp() {
         </div>
 
         <div className="transportControls">
-          <div className="langToggle" role="group" aria-label="Language">
-            {langs.map((lang) => (
-              <button
-                className={state.lang === lang ? "segment active" : "segment"}
-                key={lang}
-                onClick={() => state.setLang(lang)}
-                type="button"
-              >
-                {lang.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          <button className="primaryButton" onClick={state.isPlaying ? handleStop : handlePlay} type="button">
-            {state.isPlaying ? t.stop : t.play}
+          <button
+            aria-label={state.isPlaying ? t.stop : t.play}
+            className="primaryButton iconButton"
+            onClick={state.isPlaying ? handleStop : handlePlay}
+            title={state.isPlaying ? t.stop : t.play}
+            type="button"
+          >
+            {state.isPlaying ? <StopIcon /> : <PlayIcon />}
           </button>
           <label className="bpmControl">
             <span>BPM</span>
@@ -128,6 +132,16 @@ export function NullbeatApp() {
             />
             <strong>{state.bpm}</strong>
           </label>
+          <button
+            aria-label={state.lang === "ja" ? "Switch to English" : "日本語に切り替え"}
+            className="iconButton langButton"
+            onClick={() => state.setLang(state.lang === "ja" ? "en" : "ja")}
+            title={state.lang === "ja" ? "English" : "日本語"}
+            type="button"
+          >
+            <GlobeIcon />
+            <span>{state.lang.toUpperCase()}</span>
+          </button>
         </div>
       </section>
 
@@ -231,20 +245,53 @@ export function NullbeatApp() {
           </div>
 
           <div className="actionStack">
-            <button className="transformButton" disabled={!!state.morph} onClick={state.requestTransform} type="button">
-              {state.morph ? `${t.morphLabel} ${state.morph.totalBars - state.morph.remainingBars + 1}/${state.morph.totalBars}` : t.transform}
+            <button
+              aria-label={t.transform}
+              className="iconButton actionButton transformButton"
+              disabled={!!state.morph}
+              onClick={state.requestTransform}
+              title={t.transform}
+              type="button"
+            >
+              <TransformIcon size={22} />
+              <span>
+                {state.morph
+                  ? `${state.morph.totalBars - state.morph.remainingBars + 1}/${state.morph.totalBars}`
+                  : t.transform}
+              </span>
             </button>
-            <button disabled={!!state.pending || !!state.morph} onClick={state.requestMutation} type="button">
-              {t.mutate}
+            <button
+              aria-label={t.mutate}
+              className="iconButton actionButton mutateButton"
+              disabled={!!state.pending || !!state.morph}
+              onClick={state.requestMutation}
+              title={t.mutate}
+              type="button"
+            >
+              <MutateIcon size={22} />
+              <span>{t.mutate}</span>
             </button>
-            <button disabled={!state.pending} onClick={() => state.acceptMutation()} type="button">
-              {t.accept}
+            <button
+              aria-label={t.accept}
+              className="iconButton actionButton acceptButton"
+              disabled={!state.pending}
+              onClick={() => state.acceptMutation()}
+              title={t.accept}
+              type="button"
+            >
+              <AcceptIcon size={22} />
+              <span>{t.accept}</span>
             </button>
-            <button disabled={!state.pending} onClick={state.revertMutation} type="button">
-              {t.revert}
-            </button>
-            <button onClick={state.reset} type="button">
-              {t.reset}
+            <button
+              aria-label={t.revert}
+              className="iconButton actionButton revertButton"
+              disabled={!state.pending}
+              onClick={state.revertMutation}
+              title={t.revert}
+              type="button"
+            >
+              <RevertIcon size={22} />
+              <span>{t.revert}</span>
             </button>
           </div>
 
@@ -336,20 +383,24 @@ function TrackRow({
         <span>{track.soundId}</span>
         <div className="trackToggles">
           <button
+            aria-label={t.muteTooltip}
+            aria-pressed={track.muted}
             className={track.muted ? "mini active" : "mini"}
             onClick={onMute}
             title={t.muteTooltip}
             type="button"
           >
-            M
+            <MuteIcon muted={track.muted} />
           </button>
           <button
+            aria-label={t.mutationTooltip}
+            aria-pressed={track.mutationEnabled}
             className={track.mutationEnabled ? "mini active" : "mini"}
             onClick={onMutation}
             title={t.mutationTooltip}
             type="button"
           >
-            μ
+            <TargetIcon />
           </button>
         </div>
       </div>
