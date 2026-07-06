@@ -26,16 +26,17 @@ export const ALL_INTENTS: PresetIntent[] = [
   "dreamy"
 ];
 
+// bassRoot/bassFifthはキックと音域が被らないよう、ルートを2オクターブ台に置く
 const chords = {
-  Am: { name: "Am", degree: "i", bassRoot: "A1", bassFifth: "E2", tones: ["A", "C", "E"] },
-  Em: { name: "Em", degree: "v", bassRoot: "E1", bassFifth: "B1", tones: ["E", "G", "B"] },
-  Dm: { name: "Dm", degree: "iv", bassRoot: "D2", bassFifth: "A2", tones: ["D", "F", "A"] },
-  D: { name: "D", degree: "IV", bassRoot: "D2", bassFifth: "A2", tones: ["D", "F#", "A"] },
-  F: { name: "F", degree: "VI", bassRoot: "F1", bassFifth: "C2", tones: ["F", "A", "C"] },
-  C: { name: "C", degree: "III", bassRoot: "C2", bassFifth: "G2", tones: ["C", "E", "G"] },
-  G: { name: "G", degree: "VII", bassRoot: "G1", bassFifth: "D2", tones: ["G", "B", "D"] },
-  E: { name: "E", degree: "V", bassRoot: "E1", bassFifth: "B1", tones: ["E", "G#", "B"] },
-  Bb: { name: "Bb", degree: "bII", bassRoot: "Bb1", bassFifth: "F2", tones: ["Bb", "D", "F"] }
+  Am: { name: "Am", degree: "i", bassRoot: "A2", bassFifth: "E3", tones: ["A", "C", "E"] },
+  Em: { name: "Em", degree: "v", bassRoot: "E2", bassFifth: "B2", tones: ["E", "G", "B"] },
+  Dm: { name: "Dm", degree: "iv", bassRoot: "D3", bassFifth: "A3", tones: ["D", "F", "A"] },
+  D: { name: "D", degree: "IV", bassRoot: "D3", bassFifth: "A3", tones: ["D", "F#", "A"] },
+  F: { name: "F", degree: "VI", bassRoot: "F2", bassFifth: "C3", tones: ["F", "A", "C"] },
+  C: { name: "C", degree: "III", bassRoot: "C3", bassFifth: "G3", tones: ["C", "E", "G"] },
+  G: { name: "G", degree: "VII", bassRoot: "G2", bassFifth: "D3", tones: ["G", "B", "D"] },
+  E: { name: "E", degree: "V", bassRoot: "E2", bassFifth: "B2", tones: ["E", "G#", "B"] },
+  Bb: { name: "Bb", degree: "bII", bassRoot: "Bb2", bassFifth: "F3", tones: ["Bb", "D", "F"] }
 } satisfies Record<string, Chord>;
 
 export type Progression = {
