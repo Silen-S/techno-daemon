@@ -471,6 +471,12 @@ h2 {
   color: var(--green);
 }
 
+.countdown {
+  color: var(--amber);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
 .promptOverlay {
   align-items: center;
   animation: promptFade 0.18s ease-out;

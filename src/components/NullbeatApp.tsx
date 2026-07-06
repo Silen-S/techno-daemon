@@ -44,6 +44,13 @@ export function NullbeatApp() {
   const progressionCount = progressionCountFor(state.intent);
   const progressionNumber = ((state.progressionIndex % progressionCount) + progressionCount) % progressionCount;
 
+  // 自動採用までの残り小節数(再生中に減っていく)
+  const autoAcceptBars = state.autoAccept === "off" ? null : Number(state.autoAccept);
+  const autoAcceptRemaining =
+    state.pending && autoAcceptBars !== null && state.pendingSinceBar !== null
+      ? Math.max(0, autoAcceptBars - (state.bar - state.pendingSinceBar))
+      : null;
+
   const handleImage = async (file: File | undefined) => {
     if (!file) {
       return;
@@ -142,6 +149,7 @@ export function NullbeatApp() {
               activeStep={state.activeStep}
               key={track.id}
               lang={state.lang}
+              locked={!!state.morph}
               onMute={() => state.toggleTrackMute(track.id)}
               onMutation={() => state.toggleTrackMutation(track.id)}
               onToggleStep={(index) => state.toggleStep(track.id, index)}
@@ -204,7 +212,10 @@ export function NullbeatApp() {
               type="button"
             >
               <AcceptIcon size={22} />
-              <span>{t.accept}</span>
+              <span>
+                {t.accept}
+                {autoAcceptRemaining !== null ? <em className="countdown"> {autoAcceptRemaining}</em> : null}
+              </span>
             </button>
             <button
               aria-label={t.revert}
@@ -391,6 +402,7 @@ function StepHeader({ activeStep }: { activeStep: number }) {
 function TrackRow({
   activeStep,
   lang,
+  locked,
   onMute,
   onMutation,
   onToggleStep,
@@ -399,6 +411,7 @@ function TrackRow({
 }: {
   activeStep: number;
   lang: Lang;
+  locked: boolean;
   onMute: () => void;
   onMutation: () => void;
   onToggleStep: (index: number) => void;
@@ -442,6 +455,7 @@ function TrackRow({
           <button
             aria-label={`${trackName} step ${index + 1}`}
             className={[step.enabled ? "step on" : "step", activeStep === index ? "playing" : "", step.lastMutated ? "mutated" : ""].join(" ")}
+            disabled={locked}
             key={`${track.id}-${index}`}
             onClick={() => onToggleStep(index)}
             style={{ "--velocity": step.velocity } as React.CSSProperties}
