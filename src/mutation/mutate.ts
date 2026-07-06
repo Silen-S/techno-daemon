@@ -8,7 +8,7 @@ export type MutationResult = {
   trackId: TrackState["id"];
 };
 
-const soundPools: Record<TrackState["id"], string[]> = {
+export const soundPools: Record<TrackState["id"], string[]> = {
   kick: ["909 solid", "808 hollow", "short thud", "rubber low"],
   snare: ["dry plate", "clipped clap", "short noise", "tin hit"],
   hat: ["metal ticks", "thin closed", "white needle", "dust hats"],
@@ -17,7 +17,7 @@ const soundPools: Record<TrackState["id"], string[]> = {
 };
 
 // 4つ打ちの土台を壊さないためのアンカー(常にONを維持するステップ)
-const anchors: Record<TrackState["id"], number[]> = {
+export const anchors: Record<TrackState["id"], number[]> = {
   kick: [0, 4, 8, 12],
   snare: [4, 12],
   hat: [],
@@ -34,7 +34,7 @@ const variationSteps: Record<TrackState["id"], number[]> = {
   synth: [1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15]
 };
 
-const densityRange: Record<TrackState["id"], [number, number]> = {
+export const densityRange: Record<TrackState["id"], [number, number]> = {
   kick: [4, 8],
   snare: [2, 6],
   hat: [3, 10],
@@ -74,13 +74,13 @@ const cloneTracks = (tracks: TrackState[]): TrackState[] =>
   }));
 
 // Bresenham法によるEuclideanリズム。rotateで頭拍からずらして裏拍感を出す
-const euclidean = (hits: number, rotate = 0, steps = STEPS) =>
+export const euclidean = (hits: number, rotate = 0, steps = STEPS) =>
   Array.from({ length: steps }, (_, i) => {
     const index = (i - rotate + steps * 2) % steps;
     return Math.floor(((index + 1) * hits) / steps) - Math.floor((index * hits) / steps) === 1;
   });
 
-const withAnchors = (pattern: boolean[], trackId: TrackState["id"]) =>
+export const withAnchors = (pattern: boolean[], trackId: TrackState["id"]) =>
   pattern.map((enabled, index) => enabled || anchors[trackId].includes(index));
 
 const enabledPattern = (track: TrackState) => track.steps.map((step) => step.enabled);

@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
+import { createMorph, morphTracks, type MorphState } from "@/mutation/transform";
 import { melodyPoolFor, nearestInPool } from "@/theory/harmony";
 import type { Lang } from "@/i18n/labels";
 import type { AppSnapshot, AutoAcceptSetting, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
@@ -38,9 +39,12 @@ type BeatStore = AppSnapshot & {
   autoAccept: AutoAcceptSetting;
   pendingSinceBar: number | null;
   lang: Lang;
+  morph: MorphState | null;
   setBar: (bar: number) => void;
   setAutoAccept: (autoAccept: AutoAcceptSetting) => void;
   setLang: (lang: Lang) => void;
+  requestTransform: () => void;
+  morphTick: () => void;
   setPlaying: (isPlaying: boolean) => void;
   setActiveStep: (activeStep: number) => void;
   setBpm: (bpm: number) => void;
@@ -139,9 +143,36 @@ export const useBeatStore = create<BeatStore>()(
       autoAccept: "4",
       pendingSinceBar: null,
       lang: "ja",
+      morph: null,
       setBar: (bar) => set({ bar }),
       setAutoAccept: (autoAccept) => set({ autoAccept }),
       setLang: (lang) => set({ lang }),
+      requestTransform: () =>
+        set((state) => {
+          if (state.morph) {
+            return {};
+          }
+          const current = normalizeSnapshot(snapshotFromState(state));
+          return {
+            morph: createMorph(current),
+            // 未確定の変化はそのまま取り込んでモーフを開始する
+            pending: null,
+            pendingSinceBar: null,
+            history: [current, ...state.history].slice(0, 8)
+          };
+        }),
+      morphTick: () =>
+        set((state) => {
+          if (!state.morph) {
+            return {};
+          }
+          const tracks = morphTracks(state.tracks, state.morph);
+          const remainingBars = state.morph.remainingBars - 1;
+          return {
+            tracks,
+            morph: remainingBars > 0 ? { ...state.morph, remainingBars } : null
+          };
+        }),
       setPlaying: (isPlaying) => set({ isPlaying }),
       setActiveStep: (activeStep) => set({ activeStep }),
       setBpm: (bpm) => set({ bpm: Math.max(80, Math.min(150, Math.round(bpm))) }),
@@ -223,7 +254,8 @@ export const useBeatStore = create<BeatStore>()(
         })),
       requestMutation: () =>
         set((state) => {
-          if (state.pending) {
+          // モーフ中は通常のMutationを止め、変化を1系統に保つ
+          if (state.pending || state.morph) {
             return {};
           }
 
@@ -265,7 +297,8 @@ export const useBeatStore = create<BeatStore>()(
           pendingSinceBar: null,
           history: [],
           activeStep: -1,
-          lastMutation: null
+          lastMutation: null,
+          morph: null
         })
     }),
     {

@@ -27,8 +27,15 @@ export const useBeatEngine = () => {
       onBar: (bar) => {
         setBar(bar);
 
-        // 未確定の変化が指定ループ数を超えたら自動でAcceptする
         const store = useBeatStore.getState();
+
+        // モーフ中は1小節ごとに目標アレンジへ近づけ、通常のMutationは行わない
+        if (store.morph) {
+          store.morphTick();
+          return;
+        }
+
+        // 未確定の変化が指定ループ数を超えたら自動でAcceptする
         if (
           store.pending &&
           store.autoAccept !== "off" &&

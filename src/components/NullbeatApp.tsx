@@ -217,7 +217,10 @@ export function NullbeatApp() {
           </div>
 
           <div className="actionStack">
-            <button disabled={!!state.pending} onClick={state.requestMutation} type="button">
+            <button className="transformButton" disabled={!!state.morph} onClick={state.requestTransform} type="button">
+              {state.morph ? `${t.morphLabel} ${state.morph.totalBars - state.morph.remainingBars + 1}/${state.morph.totalBars}` : t.transform}
+            </button>
+            <button disabled={!!state.pending || !!state.morph} onClick={state.requestMutation} type="button">
               {t.mutate}
             </button>
             <button disabled={!state.pending} onClick={() => state.acceptMutation()} type="button">
@@ -245,6 +248,11 @@ export function NullbeatApp() {
             {state.lastMutation ? (
               <span>
                 {t.lastLabel} {t.tracks[state.lastMutation.trackId]} / {t.targets[state.lastMutation.target]}
+              </span>
+            ) : null}
+            {state.morph ? (
+              <span>
+                {t.morphLabel} {state.morph.totalBars - state.morph.remainingBars + 1}/{state.morph.totalBars}
               </span>
             ) : null}
             <span>{state.pending ? t.uncommitted : t.locked}</span>

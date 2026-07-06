@@ -22,6 +22,8 @@ type Labels = {
   accept: string;
   revert: string;
   reset: string;
+  transform: string;
+  morphLabel: string;
   running: string;
   idle: string;
   stepLabel: string;
@@ -64,6 +66,8 @@ export const labels: Record<Lang, Labels> = {
     accept: "Accept",
     revert: "Revert",
     reset: "Reset",
+    transform: "Transform",
+    morphLabel: "MORPH",
     running: "RUNNING",
     idle: "IDLE",
     stepLabel: "STEP",
@@ -104,6 +108,8 @@ export const labels: Record<Lang, Labels> = {
     accept: "採用",
     revert: "戻す",
     reset: "リセット",
+    transform: "曲調を変える",
+    morphLabel: "モーフ",
     running: "再生中",
     idle: "停止中",
     stepLabel: "ステップ",

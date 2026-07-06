@@ -380,7 +380,13 @@ h2 {
   grid-template-columns: 1fr 1fr;
 }
 
-.actionStack button:first-child {
+.transformButton {
+  border-color: #6b4a8a;
+  color: #c9a0f0;
+  grid-column: 1 / -1;
+}
+
+.actionStack button:nth-child(2) {
   border-color: #8a7442;
   color: var(--amber);
 }
