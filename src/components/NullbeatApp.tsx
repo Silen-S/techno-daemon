@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   AcceptIcon,
   GlobeIcon,
@@ -16,12 +17,15 @@ import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
 import { ALL_INTENTS, chordForBar, KEY_LABEL, progressionCountFor, progressionFor } from "@/theory/harmony";
-import type { AutoAcceptSetting, MutationInterval, MutationTarget, TrackState } from "@/types";
+import type { AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
 const intervals: MutationInterval[] = ["manual", "4", "8", "16"];
 const autoAccepts: AutoAcceptSetting[] = ["off", "2", "4", "8"];
 const intents = ALL_INTENTS;
+
+// 雰囲気提案ダイアログが自動で閉じるまでの秒数
+const INTENT_PROMPT_TIMEOUT_SEC = 10;
 
 export function NullbeatApp() {
   const engineRef = useBeatEngine();
@@ -359,23 +363,61 @@ export function NullbeatApp() {
       </details>
 
       {state.intentPrompt ? (
-        <div className="promptOverlay" role="dialog" aria-modal="true" aria-label={t.intentPromptTitle}>
-          <div className="promptCard">
-            <h2>{t.intentPromptTitle}</h2>
-            <div className="promptOptions">
-              {state.intentPrompt.map((intent) => (
-                <button className="promptOption" key={intent} onClick={() => state.setIntent(intent)} type="button">
-                  {t.intents[intent]}
-                </button>
-              ))}
-            </div>
-            <button className="promptKeep" onClick={state.closeIntentPrompt} type="button">
-              {t.intentPromptKeep}
-            </button>
-          </div>
-        </div>
+        <IntentPromptDialog
+          intents={state.intentPrompt}
+          lang={state.lang}
+          onClose={state.closeIntentPrompt}
+          onSelect={state.setIntent}
+        />
       ) : null}
     </main>
+  );
+}
+
+// 雰囲気の提案ダイアログ。表示から一定秒数で「このまま」として自動クローズする
+function IntentPromptDialog({
+  intents: options,
+  lang,
+  onClose,
+  onSelect
+}: {
+  intents: PresetIntent[];
+  lang: Lang;
+  onClose: () => void;
+  onSelect: (intent: PresetIntent) => void;
+}) {
+  const t = labels[lang];
+  const [secondsLeft, setSecondsLeft] = useState(INTENT_PROMPT_TIMEOUT_SEC);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsLeft((seconds) => {
+        if (seconds <= 1) {
+          onClose();
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [onClose]);
+
+  return (
+    <div className="promptOverlay" role="dialog" aria-modal="true" aria-label={t.intentPromptTitle}>
+      <div className="promptCard">
+        <h2>{t.intentPromptTitle}</h2>
+        <div className="promptOptions">
+          {options.map((intent) => (
+            <button className="promptOption" key={intent} onClick={() => onSelect(intent)} type="button">
+              {t.intents[intent]}
+            </button>
+          ))}
+        </div>
+        <button className="promptKeep" onClick={onClose} type="button">
+          {t.intentPromptKeep} <em className="countdown">({secondsLeft})</em>
+        </button>
+      </div>
+    </div>
   );
 }
 
