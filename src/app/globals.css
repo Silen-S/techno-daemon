@@ -477,6 +477,22 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+.aiBlock {
+  gap: 8px;
+}
+
+.aiButton {
+  border-color: #5a7d8a;
+  color: var(--cyan);
+  flex-direction: row;
+  min-height: 48px;
+}
+
+.aiError {
+  color: var(--red);
+  font-size: 12px;
+}
+
 .promptOverlay {
   align-items: center;
   animation: promptFade 0.18s ease-out;

@@ -20,6 +20,11 @@ type Labels = {
   intentPromptHeading: string;
   on: string;
   off: string;
+  aiTransform: string;
+  aiPlaceholder: string;
+  aiBusy: string;
+  aiErrorLabel: string;
+  aiNoKey: string;
   inputHeading: string;
   moodPlaceholder: string;
   imageTone: string;
@@ -82,6 +87,11 @@ export const labels: Record<Lang, Labels> = {
     intentPromptHeading: "Vibe suggestions",
     on: "On",
     off: "Off",
+    aiTransform: "AI Transform",
+    aiPlaceholder: "e.g. euphoric hard groove at dawn",
+    aiBusy: "Daemon thinking...",
+    aiErrorLabel: "AI error",
+    aiNoKey: "API key not set",
     inputHeading: "Input",
     moodPlaceholder: "coding / dark / acid / euphoric ...",
     imageTone: "Image tone",
@@ -142,6 +152,11 @@ export const labels: Record<Lang, Labels> = {
     intentPromptHeading: "雰囲気の提案",
     on: "オン",
     off: "オフ",
+    aiTransform: "AIで曲調を変える",
+    aiPlaceholder: "例: 夜明けの多幸感ハードグルーヴ",
+    aiBusy: "デーモン思考中...",
+    aiErrorLabel: "AIエラー",
+    aiNoKey: "APIキー未設定",
     inputHeading: "入力",
     moodPlaceholder: "coding / dark / acid / euphoric ...",
     imageTone: "画像トーン",

@@ -20,8 +20,17 @@ const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, v
 const pick = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
 
+// トラック1本ぶんの目標を表す指示。AI生成とランダム生成の共通入力
+export type TrackDirective = {
+  density: number;
+  filter: number;
+  soundId: string;
+  baseVelocity: number;
+  notes?: string[];
+};
+
 // スケールプール内のランダムウォークでフレーズを作る
-const generateMelody = (pool: string[]): string[] => {
+export const generateMelody = (pool: string[]): string[] => {
   let index = Math.floor(Math.random() * pool.length);
   return Array.from({ length: STEPS }, () => {
     index = clamp(index + pick([-2, -1, -1, 0, 1, 1, 2]), 0, pool.length - 1);
@@ -29,19 +38,22 @@ const generateMelody = (pool: string[]): string[] => {
   });
 };
 
-const generateTrack = (track: TrackState, pool: string[]): TrackState => {
-  const density = clamp(randomBetween(0.3, 0.8), 0.18, 0.96);
+// 指示からトラックの目標状態を組み立てる
+export const buildTrackFromDirective = (track: TrackState, directive: TrackDirective): TrackState => {
+  const density = clamp(directive.density, 0.18, 0.96);
   const [min, max] = densityRange[track.id];
   const hits = Math.round(min + (max - min) * density);
   const rotate = track.id === "hat" ? pick([1, 2]) : 0;
   const pattern = withAnchors(euclidean(hits, rotate), track.id);
-  const notes = track.id === "synth" ? generateMelody(pool) : null;
-  const baseVelocity = randomBetween(0.42, 0.68);
+  const notes = track.id === "synth" ? directive.notes ?? null : null;
+  const baseVelocity = clamp(directive.baseVelocity, 0.3, 0.8);
 
   return {
     ...track,
-    soundId: pick(soundPools[track.id].filter((sound) => sound !== track.soundId)),
-    filter: clamp(randomBetween(0.3, 0.85)),
+    soundId: soundPools[track.id].includes(directive.soundId)
+      ? directive.soundId
+      : pick(soundPools[track.id].filter((sound) => sound !== track.soundId)),
+    filter: clamp(directive.filter),
     density,
     steps: track.steps.map((step, index) => ({
       ...step,
@@ -53,22 +65,33 @@ const generateTrack = (track: TrackState, pool: string[]): TrackState => {
   };
 };
 
+const randomDirective = (track: TrackState, pool: string[]): TrackDirective => ({
+  density: randomBetween(0.3, 0.8),
+  filter: randomBetween(0.3, 0.85),
+  soundId: pick(soundPools[track.id].filter((sound) => sound !== track.soundId)),
+  baseVelocity: randomBetween(0.42, 0.68),
+  notes: track.id === "synth" ? generateMelody(pool) : undefined
+});
+
 export const generateArrangement = (snapshot: AppSnapshot): AppSnapshot => {
   const pool = melodyPoolFor(snapshot.intent);
   return {
     ...snapshot,
-    tracks: snapshot.tracks.map((track) => generateTrack(track, pool))
+    tracks: snapshot.tracks.map((track) => buildTrackFromDirective(track, randomDirective(track, pool)))
   };
 };
 
-export const createMorph = (snapshot: AppSnapshot): MorphState => ({
-  target: generateArrangement(snapshot),
+// 指定した目標アレンジからモーフを作る(AI生成の目標にも使う)
+export const createMorphWithTarget = (target: AppSnapshot): MorphState => ({
+  target,
   totalBars: MORPH_BARS,
   remainingBars: MORPH_BARS,
   soundSwitchBars: Object.fromEntries(
-    snapshot.tracks.map((track) => [track.id, 1 + Math.floor(Math.random() * MORPH_BARS)])
+    target.tracks.map((track) => [track.id, 1 + Math.floor(Math.random() * MORPH_BARS)])
   ) as Record<TrackId, number>
 });
+
+export const createMorph = (snapshot: AppSnapshot): MorphState => createMorphWithTarget(generateArrangement(snapshot));
 
 // 1小節ぶんモーフを進める。数値は残り小節数で線形補間し、
 // ステップの差分は残り小節数で割った数だけランダムに反映する

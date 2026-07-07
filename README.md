@@ -37,6 +37,17 @@ npm run start    # 本番サーバー
 npm run lint     # ESLint
 ```
 
+### AI 曲調変化（任意）
+
+Gemini API（`gemini-2.5-flash`）でテキスト指示から目標アレンジを生成する機能があります。利用するには Google AI Studio の API キーを設定します（未設定の場合、AI ボタンは無効表示になりそれ以外の機能はすべて動作します）:
+
+```bash
+# .env.local（ローカル開発）
+NEXT_PUBLIC_GEMINI_API_KEY=<your-api-key>
+```
+
+デプロイ時はビルド環境の環境変数に同名で設定してください。キーはビルド時にフロントエンドへ埋め込まれるため、公開時は API キーに HTTP リファラー制限を設定することを推奨します。
+
 ブラウザの音声制約により、初回の Play 操作で音声エンジン（`Tone.start()`）が起動します。対応ブラウザは Chrome / Edge を優先。
 
 ## ディレクトリ構成

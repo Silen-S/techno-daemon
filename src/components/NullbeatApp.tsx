@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AcceptIcon,
+  DaemonAiIcon,
   GlobeIcon,
   MutateIcon,
   MuteIcon,
@@ -12,6 +13,7 @@ import {
   TargetIcon,
   TransformIcon
 } from "@/components/icons";
+import { hasGeminiKey } from "@/ai/gemini";
 import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
@@ -31,6 +33,12 @@ export function NullbeatApp() {
   const engineRef = useBeatEngine();
   const state = useBeatStore();
   const t = labels[state.lang];
+  const [aiRequest, setAiRequest] = useState("");
+  const aiReady = hasGeminiKey();
+
+  const handleAiTransform = () => {
+    void state.requestAiTransform(aiRequest);
+  };
 
   const handlePlay = async () => {
     await engineRef.current?.play();
@@ -232,6 +240,38 @@ export function NullbeatApp() {
               <RevertIcon size={22} />
               <span>{t.revert}</span>
             </button>
+          </div>
+
+          <div className="panelBlock aiBlock">
+            <input
+              className="textInput"
+              disabled={state.aiBusy}
+              onChange={(event) => setAiRequest(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && aiReady && !state.aiBusy && !state.morph) {
+                  handleAiTransform();
+                }
+              }}
+              placeholder={t.aiPlaceholder}
+              type="text"
+              value={aiRequest}
+            />
+            <button
+              aria-label={t.aiTransform}
+              className="iconButton actionButton aiButton"
+              disabled={!aiReady || state.aiBusy || !!state.morph}
+              onClick={handleAiTransform}
+              title={aiReady ? t.aiTransform : t.aiNoKey}
+              type="button"
+            >
+              <DaemonAiIcon size={22} />
+              <span>{state.aiBusy ? t.aiBusy : aiReady ? t.aiTransform : t.aiNoKey}</span>
+            </button>
+            {state.aiError ? (
+              <p className="aiError">
+                {t.aiErrorLabel}: {state.aiError}
+              </p>
+            ) : null}
           </div>
         </aside>
       </section>

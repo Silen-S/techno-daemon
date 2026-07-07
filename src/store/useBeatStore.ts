@@ -4,7 +4,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
-import { createMorph, morphTracks, type MorphState } from "@/mutation/transform";
+import { createMorph, createMorphWithTarget, morphTracks, type MorphState } from "@/mutation/transform";
+import { generateArrangementWithAI } from "@/ai/gemini";
 import { ALL_INTENTS, melodyPoolFor, nearestInPool, randomProgressionIndex } from "@/theory/harmony";
 import type { Lang } from "@/i18n/labels";
 import type { AppSnapshot, AutoAcceptSetting, FeedbackWeights, ImageTone, LastMutation, MutationInterval, MutationTarget, PresetIntent, StepState, TrackId, TrackState } from "@/types";
@@ -49,6 +50,9 @@ type BeatStore = AppSnapshot & {
   openIntentPrompt: () => void;
   closeIntentPrompt: () => void;
   requestTransform: () => void;
+  aiBusy: boolean;
+  aiError: string | null;
+  requestAiTransform: (request: string) => Promise<void>;
   morphTick: () => void;
   setPlaying: (isPlaying: boolean) => void;
   setActiveStep: (activeStep: number) => void;
@@ -191,9 +195,50 @@ export const useBeatStore = create<BeatStore>()(
             // 未確定の変化はそのまま取り込んでモーフを開始する
             pending: null,
             pendingSinceBar: null,
+            aiError: null,
             history: [current, ...state.history].slice(0, 8)
           };
         }),
+      aiBusy: false,
+      aiError: null,
+      requestAiTransform: async (request) => {
+        const state = get();
+        if (state.morph || state.aiBusy) {
+          return;
+        }
+        set({ aiBusy: true, aiError: null });
+
+        const current = normalizeSnapshot(snapshotFromState(state));
+        try {
+          const result = await generateArrangementWithAI(current, request);
+          set((prev) => {
+            // 待機中に別のモーフが始まっていたら破棄する
+            if (prev.morph) {
+              return { aiBusy: false };
+            }
+            return {
+              aiBusy: false,
+              morph: createMorphWithTarget(result.target),
+              // AIが選んだ雰囲気とBPMは即時反映し、進行も切り替える
+              intent: result.intent,
+              bpm: result.bpm,
+              progressionIndex:
+                result.intent === prev.intent
+                  ? randomProgressionIndex(prev.intent, prev.progressionIndex)
+                  : randomProgressionIndex(result.intent),
+              pending: null,
+              pendingSinceBar: null,
+              intentPrompt: null,
+              history: [current, ...prev.history].slice(0, 8)
+            };
+          });
+        } catch (error) {
+          set({
+            aiBusy: false,
+            aiError: error instanceof Error ? error.message : String(error)
+          });
+        }
+      },
       morphTick: () =>
         set((state) => {
           if (!state.morph) {

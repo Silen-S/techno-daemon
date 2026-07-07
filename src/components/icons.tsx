@@ -73,6 +73,17 @@ export const TargetIcon = ({ size = 18 }: IconProps) => (
   </svg>
 );
 
+// AI: 悪魔の顔(ツノ+目)でデーモンのAIを表す
+export const DaemonAiIcon = ({ size = 20 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M5 9C4 6 4.5 4 6.5 3c.5 2 1.5 3.4 3 4M19 9c1-3 .5-5-1.5-6-.5 2-1.5 3.4-3 4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="13" r="7" />
+    <circle cx="9.5" cy="12.5" r="1.2" fill="currentColor" stroke="none" />
+    <circle cx="14.5" cy="12.5" r="1.2" fill="currentColor" stroke="none" />
+    <path d="M9.5 16.5c1.5 1.2 3.5 1.2 5 0" />
+  </svg>
+);
+
 // 言語切替: 地球
 export const GlobeIcon = ({ size = 18 }: IconProps) => (
   <svg {...base(size)} aria-hidden="true">
