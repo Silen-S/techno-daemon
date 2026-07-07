@@ -13,7 +13,7 @@ import {
   TargetIcon,
   TransformIcon
 } from "@/components/icons";
-import { hasGeminiKey } from "@/ai/gemini";
+import { hasGeminiKey, MAX_REQUEST_LENGTH } from "@/ai/gemini";
 import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
@@ -246,6 +246,7 @@ export function NullbeatApp() {
             <input
               className="textInput"
               disabled={state.aiBusy}
+              maxLength={MAX_REQUEST_LENGTH}
               onChange={(event) => setAiRequest(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && aiReady && !state.aiBusy && !state.morph) {
@@ -554,7 +555,7 @@ function TrackRow({
         <input
           aria-label={`${trackName} volume`}
           className="volumeSlider"
-          max={1}
+          max={2}
           min={0}
           onChange={(event) => onVolume(Number(event.target.value))}
           step={0.01}

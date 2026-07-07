@@ -11,6 +11,8 @@ import type { AppSnapshot, PresetIntent, TrackId } from "@/types";
 const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? "";
 const MODEL = "gemini-2.5-flash";
 const TIMEOUT_MS = 20000;
+// リクエスト文の上限。トークン浪費とプロンプト肥大を防ぐ
+export const MAX_REQUEST_LENGTH = 300;
 
 export const hasGeminiKey = () => API_KEY.length > 0;
 
@@ -42,7 +44,8 @@ const TRACK_IDS: TrackId[] = ["kick", "snare", "hat", "bass", "synth"];
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-const buildPrompt = (snapshot: AppSnapshot, request: string) => {
+const buildPrompt = (snapshot: AppSnapshot, rawRequest: string) => {
+  const request = rawRequest.slice(0, MAX_REQUEST_LENGTH);
   const current = snapshot.tracks
     .map((track) => `${track.id}: sound="${track.soundId}" density=${track.density.toFixed(2)} filter=${track.filter.toFixed(2)}`)
     .join("\n");

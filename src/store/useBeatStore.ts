@@ -370,7 +370,7 @@ export const useBeatStore = create<BeatStore>()(
       setTrackVolume: (trackId, volume) =>
         set((state) => ({
           tracks: state.tracks.map((track) =>
-            track.id === trackId ? { ...track, volume: Math.max(0, Math.min(1, volume)) } : track
+            track.id === trackId ? { ...track, volume: Math.max(0, Math.min(2, volume)) } : track
           )
         })),
       toggleTrackMute: (trackId) =>
