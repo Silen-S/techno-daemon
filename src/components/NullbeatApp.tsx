@@ -403,6 +403,10 @@ export function NullbeatApp() {
         </div>
       </details>
 
+      <footer className="footerLinks">
+        <a href="/terms">利用規約 / Terms of Service</a>
+      </footer>
+
       {state.intentPrompt ? (
         <IntentPromptDialog
           intents={state.intentPrompt}
