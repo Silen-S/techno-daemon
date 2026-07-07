@@ -84,6 +84,15 @@ export class BeatEngine {
     this.options = options;
   }
 
+  // タブ非表示中はスケジューラの先読みを増やして、
+  // バックグラウンドでも音が途切れないようにする
+  private handleVisibility = () => {
+    if (!this.Tone) {
+      return;
+    }
+    this.Tone.getContext().lookAhead = document.hidden ? 0.8 : 0.1;
+  };
+
   async init() {
     if (this.Tone && this.nodes) {
       return;
@@ -145,8 +154,12 @@ export class BeatEngine {
 
     this.nodes = { kick, snare, hat, bass, synth, filters, channel, delay, reverb };
     this.appliedSoundIds = {};
-    // 開発時の出力確認用にToneモジュールを公開する
-    (globalThis as { __toneDebug?: ToneModule }).__toneDebug = this.Tone;
+    if (process.env.NODE_ENV !== "production") {
+      // 開発時の出力確認用にToneモジュールを公開する
+      (globalThis as { __toneDebug?: ToneModule }).__toneDebug = this.Tone;
+    }
+    document.addEventListener("visibilitychange", this.handleVisibility);
+    this.handleVisibility();
     this.Tone.Transport.bpm.value = this.bpm;
     this.applyTrackSettings();
     this.sequence = new this.Tone.Sequence((time, step) => this.tick(time, step), Array.from({ length: 16 }, (_, i) => i), "16n");
@@ -181,6 +194,7 @@ export class BeatEngine {
   }
 
   dispose() {
+    document.removeEventListener("visibilitychange", this.handleVisibility);
     if (this.Tone) {
       this.Tone.Transport.stop();
       this.Tone.Transport.cancel();
@@ -274,8 +288,13 @@ export class BeatEngine {
     }
 
     // シーケンサーのコールバックは先読みで早めに呼ばれるため、
-    // 表示更新は実際の発音時刻に合わせて行う
-    this.Tone.Draw.schedule(() => this.options.onStep(step), time);
+    // 表示更新は実際の発音時刻に合わせて行う。
+    // Tone.DrawはrequestAnimationFrameでしかイベントを消化しないため、
+    // タブ非表示中にスケジュールすると無限に蓄積してメモリリークになる。
+    // 非表示中は画面も見えないので表示更新自体を止める
+    if (!document.hidden) {
+      this.Tone.Draw.schedule(() => this.options.onStep(step), time);
+    }
 
     this.tracks.forEach((track) => {
       if (!this.shouldTrigger(track, step)) {

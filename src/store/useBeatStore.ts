@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
 import { mutateSnapshot } from "@/mutation/mutate";
 import { createMorph, createMorphWithTarget, morphTracks, type MorphState } from "@/mutation/transform";
@@ -145,6 +145,54 @@ const intentFromText = (text: string): PresetIntent | null => {
   }
   return null;
 };
+
+// persistは状態変更のたびに全設定をシリアライズして書き込むため、
+// そのままだと再生中のステップ更新(毎秒約8回)ごとにlocalStorageへ
+// 書き込みが走り、GC負荷とディスクI/Oが積み上がる。
+// 書き込みをデバウンスし、タブが隠れる/閉じる時に確実にフラッシュする。
+const PERSIST_DEBOUNCE_MS = 1000;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingPersist: { name: string; value: string } | null = null;
+
+const flushPersist = () => {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  if (pendingPersist) {
+    window.localStorage.setItem(pendingPersist.name, pendingPersist.value);
+    pendingPersist = null;
+  }
+};
+
+const debouncedLocalStorage = {
+  getItem: (name: string) => (typeof window === "undefined" ? null : window.localStorage.getItem(name)),
+  setItem: (name: string, value: string) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    pendingPersist = { name, value };
+    if (persistTimer) {
+      clearTimeout(persistTimer);
+    }
+    persistTimer = setTimeout(flushPersist, PERSIST_DEBOUNCE_MS);
+  },
+  removeItem: (name: string) => {
+    pendingPersist = null;
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(name);
+    }
+  }
+};
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flushPersist);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      flushPersist();
+    }
+  });
+}
 
 export const useBeatStore = create<BeatStore>()(
   persist(
@@ -386,6 +434,7 @@ export const useBeatStore = create<BeatStore>()(
     }),
     {
       name: "nullbeat-state",
+      storage: createJSONStorage(() => debouncedLocalStorage),
       partialize: (state) => ({
         bpm: state.bpm,
         tracks: state.tracks,
@@ -401,17 +450,22 @@ export const useBeatStore = create<BeatStore>()(
         intentPromptEnabled: state.intentPromptEnabled
       }),
       merge: (persisted, current) => {
-        const next = {
-          ...current,
-          ...(persisted as Partial<BeatStore>)
-        };
-        return normalizeSnapshot(next as BeatStore) as BeatStore;
+        // 破損した保存データでアプリが起動不能にならないようにする
+        try {
+          const next = {
+            ...current,
+            ...(persisted as Partial<BeatStore>)
+          };
+          return normalizeSnapshot(next as BeatStore) as BeatStore;
+        } catch {
+          return current;
+        }
       }
     }
   )
 );
 
-// 開発時のデバッグ用にストアを公開する
-if (typeof window !== "undefined") {
+// 開発時のデバッグ用にストアを公開する(本番では公開しない)
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
   (window as { __beatStore?: typeof useBeatStore }).__beatStore = useBeatStore;
 }
