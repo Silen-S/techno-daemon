@@ -35,7 +35,7 @@ export const useBeatEngine = () => {
         const store = useBeatStore.getState();
 
         // 開始イントロ: 4小節ごとに1トラックずつミュート解除する
-        if (store.intro !== null && bar > 0 && bar % 4 === 0) {
+        if (store.intro !== null && bar > 1 && bar % 4 === 1) {
           store.introTick();
         }
 
