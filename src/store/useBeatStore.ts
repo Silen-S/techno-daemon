@@ -43,6 +43,7 @@ type BeatStore = AppSnapshot & {
   // イントロ進行中なら次にミュート解除するINTRO_ORDERの添字
   intro: number | null;
   setPlaybackState: (playbackState: PlaybackState) => void;
+  setTieSynth: (tieSynth: boolean) => void;
   beginIntro: () => void;
   introTick: () => void;
   clearIntro: () => void;
@@ -95,7 +96,8 @@ const snapshotFromState = (state: BeatStore): AppSnapshot => ({
   intent: state.intent,
   moodText: state.moodText,
   imageTone: state.imageTone,
-  progressionIndex: state.progressionIndex
+  progressionIndex: state.progressionIndex,
+  tieSynth: state.tieSynth
 });
 
 type LegacyTrackState = Omit<TrackState, "steps" | "volume"> & {
@@ -325,6 +327,7 @@ export const useBeatStore = create<BeatStore>()(
       playbackState: "stopped",
       intro: null,
       setPlaybackState: (playbackState) => set({ playbackState, isPlaying: playbackState === "playing" }),
+      setTieSynth: (tieSynth) => set({ tieSynth }),
       // 開始時はキックだけ残して全トラックをミュートする
       beginIntro: () =>
         set((state) => ({
@@ -503,7 +506,8 @@ export const useBeatStore = create<BeatStore>()(
         autoAccept: state.autoAccept,
         lang: state.lang,
         progressionIndex: state.progressionIndex,
-        intentPromptEnabled: state.intentPromptEnabled
+        intentPromptEnabled: state.intentPromptEnabled,
+        tieSynth: state.tieSynth
       }),
       merge: (persisted, current) => {
         // 破損した保存データでアプリが起動不能にならないようにする

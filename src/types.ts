@@ -59,4 +59,6 @@ export type AppSnapshot = {
   imageTone: ImageTone;
   // 現在の雰囲気の中で選択中のコード進行の番号
   progressionIndex: number;
+  // リードシンセで連続する同音を1つの長い音として発音する
+  tieSynth: boolean;
 };

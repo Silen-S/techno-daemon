@@ -192,7 +192,24 @@ const renderGrooveBuffer = async (snapshot: AppSnapshot): Promise<AudioBuffer> =
             bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.9);
           }
           if (track.id === "synth") {
-            synth.triggerAttackRelease(track.steps[step]?.note ?? "A3", "16n", time, velocity * 0.85);
+            const note = track.steps[step]?.note ?? "A3";
+            if (snapshot.tieSynth) {
+              const prev = step > 0 ? track.steps[step - 1] : undefined;
+              if (prev?.enabled && (prev.note ?? "A3") === note) {
+                return;
+              }
+              let count = 1;
+              while (step + count < track.steps.length) {
+                const nextStep = track.steps[step + count];
+                if (!nextStep?.enabled || (nextStep.note ?? "A3") !== note) {
+                  break;
+                }
+                count += 1;
+              }
+              synth.triggerAttackRelease(note, count * stepDuration, time, velocity * 0.85);
+            } else {
+              synth.triggerAttackRelease(note, "16n", time, velocity * 0.85);
+            }
           }
         });
       }

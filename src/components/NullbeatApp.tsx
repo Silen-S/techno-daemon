@@ -100,7 +100,8 @@ export function NullbeatApp() {
     intent: state.intent,
     moodText: state.moodText,
     imageTone: state.imageTone,
-    progressionIndex: state.progressionIndex
+    progressionIndex: state.progressionIndex,
+    tieSynth: state.tieSynth
   });
 
   const resolveGrooveMeta = () => {
@@ -530,6 +531,26 @@ export function NullbeatApp() {
               <button
                 className={!state.intentPromptEnabled ? "segment active" : "segment"}
                 onClick={() => state.setIntentPromptEnabled(false)}
+                type="button"
+              >
+                {t.off}
+              </button>
+            </div>
+          </div>
+
+          <div className="panelBlock">
+            <h2>{t.tieHeading}</h2>
+            <div className="segments">
+              <button
+                className={state.tieSynth ? "segment active" : "segment"}
+                onClick={() => state.setTieSynth(true)}
+                type="button"
+              >
+                {t.on}
+              </button>
+              <button
+                className={!state.tieSynth ? "segment active" : "segment"}
+                onClick={() => state.setTieSynth(false)}
                 type="button"
               >
                 {t.off}

@@ -75,6 +75,7 @@ export class BeatEngine {
   private bpm = 128;
   private intent: PresetIntent = "coding";
   private progressionIndex = 0;
+  private tieSynth = true;
   private step = 0;
   private bar = 0;
   private options: EngineOptions;
@@ -167,7 +168,7 @@ export class BeatEngine {
     this.sequence.start(0);
   }
 
-  update(tracks: TrackState[], bpm: number, intent: PresetIntent, progressionIndex: number) {
+  update(tracks: TrackState[], bpm: number, intent: PresetIntent, progressionIndex: number, tieSynth: boolean) {
     this.tracks = tracks;
     if (this.Tone && this.bpm !== bpm) {
       this.Tone.Transport.bpm.rampTo(bpm, 0.08);
@@ -175,6 +176,7 @@ export class BeatEngine {
     this.bpm = bpm;
     this.intent = intent;
     this.progressionIndex = progressionIndex;
+    this.tieSynth = tieSynth;
     this.applyTrackSettings();
   }
 
@@ -329,7 +331,25 @@ export class BeatEngine {
 
       if (track.id === "synth") {
         const note = track.steps[step]?.note ?? "A3";
-        nodes.synth.triggerAttackRelease(note, "16n", time, velocity * 0.85);
+        if (this.tieSynth) {
+          // 直前が同音なら継続中なので発音しない
+          const prev = step > 0 ? track.steps[step - 1] : undefined;
+          if (prev?.enabled && (prev.note ?? "A3") === note) {
+            return;
+          }
+          // 連続する同音の数だけ音を伸ばす(4連続=4分音符)
+          let count = 1;
+          while (step + count < track.steps.length) {
+            const nextStep = track.steps[step + count];
+            if (!nextStep?.enabled || (nextStep.note ?? "A3") !== note) {
+              break;
+            }
+            count += 1;
+          }
+          nodes.synth.triggerAttackRelease(note, count * (60 / this.bpm / 4), time, velocity * 0.85);
+        } else {
+          nodes.synth.triggerAttackRelease(note, "16n", time, velocity * 0.85);
+        }
       }
     });
   }

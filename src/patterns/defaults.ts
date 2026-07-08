@@ -95,5 +95,6 @@ export const defaultSnapshot: AppSnapshot = {
   intent: "coding",
   moodText: "",
   imageTone: "none",
-  progressionIndex: 0
+  progressionIndex: 0,
+  tieSynth: true
 };

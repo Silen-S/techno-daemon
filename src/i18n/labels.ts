@@ -23,6 +23,7 @@ type Labels = {
   intentPromptHeading: string;
   on: string;
   off: string;
+  tieHeading: string;
   grooveHeading: string;
   grooveTitlePlaceholder: string;
   grooveMemoPlaceholder: string;
@@ -99,6 +100,7 @@ export const labels: Record<Lang, Labels> = {
     intentPromptHeading: "Vibe suggestions",
     on: "On",
     off: "Off",
+    tieHeading: "Lead note ties",
     grooveHeading: "My groove",
     grooveTitlePlaceholder: "Title",
     grooveMemoPlaceholder: "Memo",
@@ -173,6 +175,7 @@ export const labels: Record<Lang, Labels> = {
     intentPromptHeading: "雰囲気の提案",
     on: "オン",
     off: "オフ",
+    tieHeading: "リードの同音連結",
     grooveHeading: "My groove",
     grooveTitlePlaceholder: "タイトル",
     grooveMemoPlaceholder: "メモ",
