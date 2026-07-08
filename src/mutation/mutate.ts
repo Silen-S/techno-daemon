@@ -131,19 +131,38 @@ const mutateMelody = (track: TrackState, pool: string[]) => {
   });
 };
 
-const mutateVelocity = (track: TrackState) =>
-  track.steps.map((step, index) => {
-    if (!step.enabled || Math.random() > 0.35) {
+const VELOCITY_MIN = 0.18;
+const VELOCITY_MAX = 0.95;
+
+// 有効なステップから1〜3個を選び、必ず聴こえる量だけ上下させる。
+// 以前は方向バイアスを毎回加算していたため、数回で全ステップが
+// 上限/下限に張り付き、それ以降は変化しなくなっていた。
+const mutateVelocity = (track: TrackState) => {
+  const enabledIndexes = track.steps.map((step, index) => (step.enabled ? index : -1)).filter((index) => index >= 0);
+  if (enabledIndexes.length === 0) {
+    return track.steps;
+  }
+
+  const count = Math.min(enabledIndexes.length, 1 + Math.floor(Math.random() * 3));
+  const shuffled = [...enabledIndexes].sort(() => Math.random() - 0.5);
+  const targets = new Set(shuffled.slice(0, count));
+
+  return track.steps.map((step, index) => {
+    if (!targets.has(index)) {
       return step;
     }
-    // 表拍は強く・裏拍は弱くなる方向へ寄せて、グルーヴが崩れないようにする
-    const bias = index % 4 === 0 ? 0.05 : -0.04;
+    const delta = 0.08 + Math.random() * 0.14;
+    // 端に近いときは動ける方向へ、それ以外はランダムな方向へ
+    const canUp = step.velocity + delta <= VELOCITY_MAX;
+    const canDown = step.velocity - delta >= VELOCITY_MIN;
+    const goUp = canUp && (!canDown || Math.random() < 0.5);
     return {
       ...step,
-      velocity: clamp(step.velocity + (Math.random() - 0.5) * 0.18 + bias, 0.18, 0.95),
+      velocity: clamp(step.velocity + (goUp ? delta : -delta), VELOCITY_MIN, VELOCITY_MAX),
       lastMutated: true
     };
   });
+};
 
 const applyPattern = (track: TrackState, pattern: boolean[], pool: string[]) => ({
   ...track,

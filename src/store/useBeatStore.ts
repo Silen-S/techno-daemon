@@ -211,7 +211,14 @@ export const useBeatStore = create<BeatStore>()(
       morph: null,
       intentPrompt: null,
       intentPromptEnabled: true,
-      setBar: (bar) => set({ bar }),
+      setBar: (bar) =>
+        set((state) => ({
+          bar,
+          // 停止で小節カウンタが0に戻るとき、未確定変化の起点小節も
+          // リセットする。放置すると再開後のカウントダウンが
+          // 「経過小節ぶん」の巨大な値になってしまう
+          pendingSinceBar: bar === 0 && state.pendingSinceBar !== null ? 0 : state.pendingSinceBar
+        })),
       setAutoAccept: (autoAccept) => set({ autoAccept }),
       setLang: (lang) => set({ lang }),
       setIntentPromptEnabled: (intentPromptEnabled) =>
