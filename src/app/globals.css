@@ -273,20 +273,26 @@ h2 {
   position: relative;
 }
 
+.step {
+  border-radius: 50%;
+}
+
+/* 内側の丸はベロシティで大きさ、フィルター開度で明るさが変わる */
 .step::after {
   background: #434b4c;
+  border-radius: 50%;
   content: "";
-  inset: calc(76% - (var(--velocity, 0.4) * 42%)) 28% 20%;
+  inset: calc(46% - (var(--velocity, 0.4) * 30%));
   position: absolute;
 }
 
 .step.on {
-  background: #1f2a24;
+  background: #16201a;
   border-color: #456653;
 }
 
 .step.on::after {
-  background: var(--green);
+  background: hsl(145deg 62% calc(26% + (var(--filter, 0.5) * 46%)));
 }
 
 .step.playing {
@@ -294,18 +300,33 @@ h2 {
 }
 
 .step.mutated {
-  border-color: var(--amber);
+  border-color: var(--mutColor, var(--amber));
+  box-shadow: 0 0 8px var(--mutColor, var(--amber));
+}
+
+/* 音色・フィルターなどトラック全体にかかる変化はトラック名側に枠を出す */
+.trackMeta {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px 6px;
+}
+
+.trackMeta.trackMutated {
+  border-color: var(--mutColor);
+  box-shadow: 0 0 10px var(--mutColor);
 }
 
 .noteLabel {
-  color: #bfe8cd;
+  color: #dff3e6;
   font-size: 9px;
   font-weight: 700;
-  inset: auto 0 2px;
+  inset: 50% 0 auto;
   letter-spacing: 0;
   pointer-events: none;
   position: absolute;
   text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  transform: translateY(-50%);
   z-index: 1;
 }
 

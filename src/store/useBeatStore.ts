@@ -18,6 +18,9 @@ const FEEDBACK_DOWN = 0.75;
 const FEEDBACK_MIN = 0.25;
 const FEEDBACK_MAX = 4;
 
+// 「戻す」で遡れる履歴の数
+const HISTORY_LIMIT = 10;
+
 const adjustFeedback = (feedback: FeedbackWeights, lastMutation: LastMutation | null, factor: number): FeedbackWeights => {
   if (!lastMutation) {
     return feedback;
@@ -251,7 +254,7 @@ export const useBeatStore = create<BeatStore>()(
             pending: null,
             pendingSinceBar: null,
             aiError: null,
-            history: [current, ...state.history].slice(0, 8)
+            history: [current, ...state.history].slice(0, HISTORY_LIMIT)
           };
         }),
       aiBusy: false,
@@ -284,7 +287,7 @@ export const useBeatStore = create<BeatStore>()(
               pending: null,
               pendingSinceBar: null,
               intentPrompt: null,
-              history: [current, ...prev.history].slice(0, 8)
+              history: [current, ...prev.history].slice(0, HISTORY_LIMIT)
             };
           });
         } catch (error) {
@@ -407,7 +410,7 @@ export const useBeatStore = create<BeatStore>()(
             pending: current,
             pendingSinceBar: state.bar,
             lastMutation: { target: result.target, trackId: result.trackId },
-            history: [current, ...state.history].slice(0, 8)
+            history: [current, ...state.history].slice(0, HISTORY_LIMIT)
           };
         }),
       acceptMutation: (auto = false) =>
@@ -418,14 +421,25 @@ export const useBeatStore = create<BeatStore>()(
         })),
       revertMutation: () =>
         set((state) => {
-          if (!state.pending) {
+          // 未確定の変化があればそれを取り消す(学習にも反映)
+          if (state.pending) {
+            return {
+              ...state.pending,
+              pending: null,
+              pendingSinceBar: null,
+              feedback: adjustFeedback(state.feedback, state.lastMutation, FEEDBACK_DOWN)
+            };
+          }
+          // 未確定がなければ履歴を1段戻す(最大HISTORY_LIMIT個まで)
+          const [head, ...rest] = state.history;
+          if (!head) {
             return {};
           }
           return {
-            ...state.pending,
+            ...head,
+            history: rest,
             pending: null,
-            pendingSinceBar: null,
-            feedback: adjustFeedback(state.feedback, state.lastMutation, FEEDBACK_DOWN)
+            pendingSinceBar: null
           };
         }),
       reset: () =>

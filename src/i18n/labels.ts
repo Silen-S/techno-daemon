@@ -112,7 +112,7 @@ export const labels: Record<Lang, Labels> = {
     uncommitted: "UNCOMMITTED",
     locked: "LOCKED",
     learnedBias: "LEARNED BIAS",
-    tracks: { kick: "Kick", snare: "Snare/Clap", hat: "Hat", bass: "Bass", synth: "Synth" },
+    tracks: { kick: "Kick", snare: "Snare/Clap", hat: "Hat", bass: "Bass Synth", synth: "Lead Synth" },
     muteTooltip: "Mute this track",
     mutationTooltip: "Allow mutation on this track (only lit tracks change)",
     volumeTooltip: "Track volume"
@@ -177,7 +177,7 @@ export const labels: Record<Lang, Labels> = {
     uncommitted: "未確定",
     locked: "確定済み",
     learnedBias: "学習バイアス",
-    tracks: { kick: "キック", snare: "スネア/クラップ", hat: "ハット", bass: "ベース", synth: "シンセ" },
+    tracks: { kick: "キック", snare: "スネア/クラップ", hat: "ハット", bass: "ベースシンセ", synth: "リードシンセ" },
     muteTooltip: "このトラックをミュートする",
     mutationTooltip: "このトラックを変化の対象にする(点灯中のトラックだけが変化する)",
     volumeTooltip: "トラック音量"

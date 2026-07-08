@@ -5,7 +5,6 @@ import {
   AcceptIcon,
   DaemonAiIcon,
   GlobeIcon,
-  MutateIcon,
   MuteIcon,
   PlayIcon,
   RevertIcon,
@@ -205,17 +204,6 @@ export function NullbeatApp() {
               </span>
             </button>
             <button
-              aria-label={t.mutate}
-              className="iconButton actionButton mutateButton"
-              disabled={!!state.pending || !!state.morph}
-              onClick={state.requestMutation}
-              title={t.mutate}
-              type="button"
-            >
-              <MutateIcon size={22} />
-              <span>{t.mutate}</span>
-            </button>
-            <button
               aria-label={t.accept}
               className="iconButton actionButton acceptButton"
               disabled={!state.pending}
@@ -232,13 +220,18 @@ export function NullbeatApp() {
             <button
               aria-label={t.revert}
               className="iconButton actionButton revertButton"
-              disabled={!state.pending}
+              disabled={!state.pending && state.history.length === 0}
               onClick={state.revertMutation}
               title={t.revert}
               type="button"
             >
               <RevertIcon size={22} />
-              <span>{t.revert}</span>
+              <span>
+                {t.revert}
+                {!state.pending && state.history.length > 0 ? (
+                  <em className="countdown"> ({state.history.length})</em>
+                ) : null}
+              </span>
             </button>
           </div>
 
@@ -486,6 +479,18 @@ function StepHeader({ activeStep }: { activeStep: number }) {
   );
 }
 
+// 直近の変化を項目ごとに色分けして示す
+const mutationColors: Record<MutationTarget, string> = {
+  pattern: "#91f0b2",
+  sound: "#c9a0f0",
+  filter: "#7ccce4",
+  density: "#d9b56c",
+  velocity: "#e07664"
+};
+
+// 音色・フィルターはステップ単位ではなくトラック全体にかかる変化
+const trackWideTargets: MutationTarget[] = ["sound", "filter"];
+
 function TrackRow({
   activeStep,
   lang,
@@ -507,10 +512,15 @@ function TrackRow({
 }) {
   const t = labels[lang];
   const trackName = t.tracks[track.id];
+  const mutColor = track.lastMutatedTarget ? mutationColors[track.lastMutatedTarget] : "transparent";
+  const trackWideMutated = !!track.lastMutatedTarget && trackWideTargets.includes(track.lastMutatedTarget);
 
   return (
-    <div className={track.muted ? "trackRow muted" : "trackRow"}>
-      <div className="trackMeta">
+    <div
+      className={track.muted ? "trackRow muted" : "trackRow"}
+      style={{ "--filter": track.filter, "--mutColor": mutColor } as React.CSSProperties}
+    >
+      <div className={trackWideMutated ? "trackMeta trackMutated" : "trackMeta"}>
         <strong>{trackName}</strong>
         <span>{track.soundId}</span>
         <div className="trackToggles">
