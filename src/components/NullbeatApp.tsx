@@ -25,7 +25,15 @@ import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
-import { ALL_INTENTS, chordForBar, KEY_LABEL, progressionCountFor, progressionFor } from "@/theory/harmony";
+import {
+  ALL_INTENTS,
+  bassNoteForStep,
+  chordForBar,
+  KEY_LABEL,
+  progressionCountFor,
+  progressionFor,
+  type Chord
+} from "@/theory/harmony";
 import type { AppSnapshot, AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
@@ -314,6 +322,7 @@ export function NullbeatApp() {
           {state.tracks.map((track) => (
             <TrackRow
               activeStep={state.activeStep}
+              chord={chord}
               key={track.id}
               lang={state.lang}
               locked={!!state.morph}
@@ -680,6 +689,7 @@ const trackWideTargets: MutationTarget[] = ["sound", "filter"];
 
 function TrackRow({
   activeStep,
+  chord,
   lang,
   locked,
   onMute,
@@ -689,6 +699,7 @@ function TrackRow({
   track
 }: {
   activeStep: number;
+  chord: Chord;
   lang: Lang;
   locked: boolean;
   onMute: () => void;
@@ -699,6 +710,8 @@ function TrackRow({
 }) {
   const t = labels[lang];
   const trackName = t.tracks[track.id];
+  // ベースの音程はコード進行から導出されるため、現在小節のコードで表示する
+  const noteAt = (index: number, note?: string) => (track.id === "bass" ? bassNoteForStep(chord, index) : note);
   const mutColor = track.lastMutatedTarget ? mutationColors[track.lastMutatedTarget] : "transparent";
   const trackWideMutated = !!track.lastMutatedTarget && trackWideTargets.includes(track.lastMutatedTarget);
 
@@ -745,7 +758,7 @@ function TrackRow({
             style={{ "--velocity": step.velocity } as React.CSSProperties}
             type="button"
           >
-            {step.note && step.enabled ? <span className="noteLabel">{step.note}</span> : null}
+            {step.enabled && noteAt(index, step.note) ? <span className="noteLabel">{noteAt(index, step.note)}</span> : null}
           </button>
         ))}
       </div>
