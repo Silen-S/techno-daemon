@@ -14,12 +14,19 @@ import {
   TransformIcon
 } from "@/components/icons";
 import { hasGeminiKey, MAX_REQUEST_LENGTH } from "@/ai/gemini";
+import {
+  bumpGrooveNumber,
+  defaultGrooveTitle,
+  downloadGrooveMp3,
+  downloadGrooveScript,
+  peekGrooveNumber
+} from "@/groove/export";
 import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
 import { useBeatStore } from "@/store/useBeatStore";
 import { ALL_INTENTS, chordForBar, KEY_LABEL, progressionCountFor, progressionFor } from "@/theory/harmony";
-import type { AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
+import type { AppSnapshot, AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
 const intervals: MutationInterval[] = ["manual", "4", "8", "16"];
@@ -67,6 +74,51 @@ export function NullbeatApp() {
 
   const handleAiTransform = () => {
     void state.requestAiTransform(aiRequest);
+  };
+
+  // My groove保存(タイトル既定は連番、メモ既定は時刻+雰囲気)
+  const [grooveTitle, setGrooveTitle] = useState("");
+  const [grooveMemo, setGrooveMemo] = useState("");
+  const [grooveDefaultTitle, setGrooveDefaultTitle] = useState(() =>
+    typeof window === "undefined" ? "My groove 01" : defaultGrooveTitle(peekGrooveNumber())
+  );
+  const [mp3Busy, setMp3Busy] = useState(false);
+
+  const grooveSnapshot = (): AppSnapshot => ({
+    bpm: state.bpm,
+    tracks: state.tracks,
+    mutationTargets: state.mutationTargets,
+    mutationInterval: state.mutationInterval,
+    intent: state.intent,
+    moodText: state.moodText,
+    imageTone: state.imageTone,
+    progressionIndex: state.progressionIndex
+  });
+
+  const resolveGrooveMeta = () => {
+    const usedDefault = grooveTitle.trim().length === 0;
+    const title = usedDefault ? grooveDefaultTitle : grooveTitle.trim();
+    const memo = grooveMemo.trim() || `${new Date().toLocaleString()} · ${state.moodText || t.intents[state.intent]}`;
+    if (usedDefault) {
+      bumpGrooveNumber();
+      setGrooveDefaultTitle(defaultGrooveTitle(peekGrooveNumber()));
+    }
+    return { title, memo };
+  };
+
+  const handleSaveScript = () => {
+    const { title, memo } = resolveGrooveMeta();
+    downloadGrooveScript(grooveSnapshot(), title, memo);
+  };
+
+  const handleSaveMp3 = async () => {
+    const { title } = resolveGrooveMeta();
+    setMp3Busy(true);
+    try {
+      await downloadGrooveMp3(grooveSnapshot(), title);
+    } finally {
+      setMp3Busy(false);
+    }
   };
 
   // メディアキー連携用の無音<audio>
@@ -370,6 +422,37 @@ export function NullbeatApp() {
                 {t.aiErrorLabel}: {state.aiError}
               </p>
             ) : null}
+          </div>
+
+          <div className="panelBlock grooveBlock">
+            <h2>{t.grooveHeading}</h2>
+            <input
+              aria-label={t.grooveTitlePlaceholder}
+              className="textInput"
+              maxLength={80}
+              onChange={(event) => setGrooveTitle(event.target.value)}
+              placeholder={grooveDefaultTitle}
+              suppressHydrationWarning
+              type="text"
+              value={grooveTitle}
+            />
+            <input
+              aria-label={t.grooveMemoPlaceholder}
+              className="textInput"
+              maxLength={200}
+              onChange={(event) => setGrooveMemo(event.target.value)}
+              placeholder={t.grooveMemoPlaceholder}
+              type="text"
+              value={grooveMemo}
+            />
+            <div className="grooveButtons">
+              <button onClick={handleSaveScript} type="button">
+                {t.saveScript}
+              </button>
+              <button disabled={mp3Busy} onClick={() => void handleSaveMp3()} type="button">
+                {mp3Busy ? t.rendering : t.saveMp3}
+              </button>
+            </div>
           </div>
         </aside>
       </section>

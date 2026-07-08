@@ -520,6 +520,21 @@ h2 {
   font-size: 12px;
 }
 
+.grooveBlock {
+  gap: 8px;
+}
+
+.grooveButtons {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.grooveButtons button {
+  font-size: 13px;
+  min-height: 40px;
+}
+
 .promptOverlay {
   align-items: center;
   animation: promptFade 0.18s ease-out;

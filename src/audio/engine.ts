@@ -25,7 +25,7 @@ type SnarePreset = { noiseType: "white" | "pink" | "brown"; decay: number; volum
 type HatPreset = { frequency: number; decay: number };
 type BassPreset = { oscillator: "sine" | "square" | "sawtooth" | "fmsquare"; q: number };
 
-const kickPresets: Record<string, KickPreset> = {
+export const kickPresets: Record<string, KickPreset> = {
   "909 solid": { pitchDecay: 0.025, octaves: 6, decay: 0.34, note: "C2" },
   "808 hollow": { pitchDecay: 0.06, octaves: 7, decay: 0.5, note: "C1" },
   "short thud": { pitchDecay: 0.015, octaves: 4, decay: 0.18, note: "C2" },
@@ -33,21 +33,21 @@ const kickPresets: Record<string, KickPreset> = {
 };
 
 // ノイズ源はローパス後のピークが低いため、他トラックより高めの音量に設定する
-const snarePresets: Record<string, SnarePreset> = {
+export const snarePresets: Record<string, SnarePreset> = {
   "dry plate": { noiseType: "white", decay: 0.12, volume: 14 },
   "clipped clap": { noiseType: "pink", decay: 0.09, volume: 17 },
   "short noise": { noiseType: "white", decay: 0.06, volume: 15 },
   "tin hit": { noiseType: "brown", decay: 0.15, volume: 16 }
 };
 
-const hatPresets: Record<string, HatPreset> = {
+export const hatPresets: Record<string, HatPreset> = {
   "metal ticks": { frequency: 240, decay: 0.055 },
   "thin closed": { frequency: 320, decay: 0.035 },
   "white needle": { frequency: 380, decay: 0.05 },
   "dust hats": { frequency: 200, decay: 0.09 }
 };
 
-const bassPresets: Record<string, BassPreset> = {
+export const bassPresets: Record<string, BassPreset> = {
   "sine pulse": { oscillator: "sine", q: 1.2 },
   "fm knock": { oscillator: "fmsquare", q: 1.6 },
   "square sub": { oscillator: "square", q: 1.4 },
@@ -56,7 +56,7 @@ const bassPresets: Record<string, BassPreset> = {
 
 type LeadPreset = { oscillator: "sawtooth" | "square" | "triangle" | "fatsawtooth"; decay: number; sustain: number };
 
-const leadPresets: Record<string, LeadPreset> = {
+export const leadPresets: Record<string, LeadPreset> = {
   "saw stab": { oscillator: "sawtooth", decay: 0.18, sustain: 0.12 },
   "square lead": { oscillator: "square", decay: 0.16, sustain: 0.3 },
   "soft pluck": { oscillator: "triangle", decay: 0.12, sustain: 0.02 },
@@ -64,7 +64,7 @@ const leadPresets: Record<string, LeadPreset> = {
 };
 
 // filter値(0..1)を対数的にカットオフ周波数へ写像する
-const filterFrequency = (value: number, min: number, max: number) =>
+export const filterFrequency = (value: number, min: number, max: number) =>
   min * Math.pow(max / min, Math.max(0, Math.min(1, value)));
 
 export class BeatEngine {

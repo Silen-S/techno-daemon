@@ -23,6 +23,12 @@ type Labels = {
   intentPromptHeading: string;
   on: string;
   off: string;
+  grooveHeading: string;
+  grooveTitlePlaceholder: string;
+  grooveMemoPlaceholder: string;
+  saveScript: string;
+  saveMp3: string;
+  rendering: string;
   aiTransform: string;
   aiPlaceholder: string;
   aiBusy: string;
@@ -93,6 +99,12 @@ export const labels: Record<Lang, Labels> = {
     intentPromptHeading: "Vibe suggestions",
     on: "On",
     off: "Off",
+    grooveHeading: "My groove",
+    grooveTitlePlaceholder: "Title",
+    grooveMemoPlaceholder: "Memo",
+    saveScript: "Save script",
+    saveMp3: "Save MP3",
+    rendering: "Rendering...",
     aiTransform: "AI Transform",
     aiPlaceholder: "e.g. euphoric hard groove at dawn",
     aiBusy: "Daemon thinking...",
@@ -161,6 +173,12 @@ export const labels: Record<Lang, Labels> = {
     intentPromptHeading: "雰囲気の提案",
     on: "オン",
     off: "オフ",
+    grooveHeading: "My groove",
+    grooveTitlePlaceholder: "タイトル",
+    grooveMemoPlaceholder: "メモ",
+    saveScript: "スクリプト保存",
+    saveMp3: "MP3保存",
+    rendering: "書き出し中...",
     aiTransform: "AIで曲調を変える",
     aiPlaceholder: "例: 夜明けの多幸感ハードグルーヴ",
     aiBusy: "デーモン思考中...",
