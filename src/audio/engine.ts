@@ -183,6 +183,11 @@ export class BeatEngine {
     this.Tone?.Transport.start();
   }
 
+  // 再生位置を保ったまま止める(再開は play() で行う)
+  pause() {
+    this.Tone?.Transport.pause();
+  }
+
   stop() {
     if (this.Tone) {
       this.Tone.Transport.stop();

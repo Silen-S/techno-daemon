@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AcceptIcon,
   DaemonAiIcon,
   GlobeIcon,
   MuteIcon,
+  PauseIcon,
   PlayIcon,
   RevertIcon,
   StopIcon,
@@ -28,6 +29,35 @@ const intents = ALL_INTENTS;
 // 雰囲気提案ダイアログが自動で閉じるまでの秒数
 const INTENT_PROMPT_TIMEOUT_SEC = 10;
 
+// OSのメディアキーを受け取るには再生中の<audio>要素が必要なため、
+// 無音のWAVをループ再生する(音はWeb Audio側から出る)
+const makeSilentWavUrl = () => {
+  const sampleRate = 8000;
+  const seconds = 1;
+  const dataLength = sampleRate * seconds * 2;
+  const buffer = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(buffer);
+  const writeString = (offset: number, text: string) => {
+    for (let i = 0; i < text.length; i += 1) {
+      view.setUint8(offset + i, text.charCodeAt(i));
+    }
+  };
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, "data");
+  view.setUint32(40, dataLength, true);
+  return URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
+};
+
 export function NullbeatApp() {
   const engineRef = useBeatEngine();
   const state = useBeatStore();
@@ -39,16 +69,80 @@ export function NullbeatApp() {
     void state.requestAiTransform(aiRequest);
   };
 
-  const handlePlay = async () => {
-    await engineRef.current?.play();
-    state.setPlaying(true);
+  // メディアキー連携用の無音<audio>
+  const silentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ensureSilentAudio = () => {
+    if (!silentAudioRef.current) {
+      const audio = new Audio(makeSilentWavUrl());
+      audio.loop = true;
+      audio.volume = 0.0001;
+      silentAudioRef.current = audio;
+    }
+    return silentAudioRef.current;
   };
 
-  const handleStop = () => {
-    engineRef.current?.stop();
-    state.setPlaying(false);
-    state.setBar(0);
+  const handleStart = async () => {
+    // 開始(再開ではない)はキックだけのイントロから立ち上げる
+    state.beginIntro();
+    await engineRef.current?.play();
+    state.setPlaybackState("playing");
+    void ensureSilentAudio().play().catch(() => {});
   };
+
+  const handleEnd = () => {
+    engineRef.current?.stop();
+    state.setPlaybackState("stopped");
+    state.clearIntro();
+    state.setBar(0);
+    silentAudioRef.current?.pause();
+  };
+
+  const handlePause = () => {
+    engineRef.current?.pause();
+    state.setPlaybackState("paused");
+    silentAudioRef.current?.pause();
+  };
+
+  const handleResume = async () => {
+    await engineRef.current?.play();
+    state.setPlaybackState("playing");
+    void ensureSilentAudio().play().catch(() => {});
+  };
+
+  // OSのメディアキー(ヘッドホンのボタン等)から一時停止/再開できるようにする
+  const mediaHandlersRef = useRef({ handleStart, handleEnd, handlePause, handleResume, playbackState: state.playbackState });
+  useEffect(() => {
+    mediaHandlersRef.current = { handleStart, handleEnd, handlePause, handleResume, playbackState: state.playbackState };
+  });
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
+      return;
+    }
+    const session = navigator.mediaSession;
+    session.metadata = new MediaMetadata({ title: "Techno Daemon", artist: "self-evolving generative rave" });
+    session.setActionHandler("play", () => {
+      const current = mediaHandlersRef.current;
+      void (current.playbackState === "paused" ? current.handleResume() : current.handleStart());
+    });
+    session.setActionHandler("pause", () => {
+      if (mediaHandlersRef.current.playbackState === "playing") {
+        mediaHandlersRef.current.handlePause();
+      }
+    });
+    session.setActionHandler("stop", () => mediaHandlersRef.current.handleEnd());
+    return () => {
+      session.setActionHandler("play", null);
+      session.setActionHandler("pause", null);
+      session.setActionHandler("stop", null);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = state.playbackState === "stopped" ? "none" : state.playbackState;
+    }
+  }, [state.playbackState]);
 
   const chord = chordForBar(Math.max(state.bar, 1), state.intent, state.progressionIndex);
   const progression = progressionFor(state.intent, state.progressionIndex);
@@ -119,13 +213,23 @@ export function NullbeatApp() {
 
         <div className="transportControls">
           <button
-            aria-label={state.isPlaying ? t.stop : t.play}
+            aria-label={state.playbackState === "stopped" ? t.play : t.stop}
             className="primaryButton iconButton"
-            onClick={state.isPlaying ? handleStop : handlePlay}
-            title={state.isPlaying ? t.stop : t.play}
+            onClick={state.playbackState === "stopped" ? handleStart : handleEnd}
+            title={state.playbackState === "stopped" ? t.play : t.stop}
             type="button"
           >
-            {state.isPlaying ? <StopIcon /> : <PlayIcon />}
+            {state.playbackState === "stopped" ? <PlayIcon /> : <StopIcon />}
+          </button>
+          <button
+            aria-label={state.playbackState === "paused" ? t.resume : t.pause}
+            className="iconButton pauseButton"
+            disabled={state.playbackState === "stopped"}
+            onClick={state.playbackState === "paused" ? handleResume : handlePause}
+            title={state.playbackState === "paused" ? t.resume : t.pause}
+            type="button"
+          >
+            {state.playbackState === "paused" ? <PlayIcon /> : <PauseIcon />}
           </button>
           <label className="bpmControl">
             <span>BPM</span>
@@ -359,7 +463,7 @@ export function NullbeatApp() {
           </div>
 
           <div className="monitor" aria-label="Current state">
-            <span>{state.isPlaying ? t.running : t.idle}</span>
+            <span>{state.playbackState === "playing" ? t.running : state.playbackState === "paused" ? t.paused : t.idle}</span>
             <span>
               {t.stepLabel} {state.activeStep < 0 ? "--" : String(state.activeStep + 1).padStart(2, "0")}
             </span>

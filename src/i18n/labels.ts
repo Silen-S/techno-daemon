@@ -6,6 +6,9 @@ type Labels = {
   tagline: string;
   play: string;
   stop: string;
+  pause: string;
+  resume: string;
+  paused: string;
   mutationHeading: string;
   targets: Record<MutationTarget, string>;
   timingHeading: string;
@@ -54,8 +57,11 @@ type Labels = {
 export const labels: Record<Lang, Labels> = {
   en: {
     tagline: "self-evolving generative rave",
-    play: "Play",
+    play: "Start",
     stop: "Stop",
+    pause: "Pause",
+    resume: "Resume",
+    paused: "PAUSED",
     mutationHeading: "Mutation",
     targets: {
       pattern: "pattern",
@@ -119,8 +125,11 @@ export const labels: Record<Lang, Labels> = {
   },
   ja: {
     tagline: "自己進化するジェネレーティブ・レイヴ",
-    play: "再生",
-    stop: "停止",
+    play: "開始",
+    stop: "終了",
+    pause: "一時停止",
+    resume: "再開",
+    paused: "一時停止中",
     mutationHeading: "変化させる項目",
     targets: {
       pattern: "パターン",

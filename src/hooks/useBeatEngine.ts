@@ -33,6 +33,11 @@ export const useBeatEngine = () => {
 
         const store = useBeatStore.getState();
 
+        // 開始イントロ: 4小節ごとに1トラックずつミュート解除する
+        if (store.intro !== null && bar > 0 && bar % 4 === 0) {
+          store.introTick();
+        }
+
         // モーフ中は1小節ごとに目標アレンジへ近づけ、通常のMutationは行わない
         if (store.morph) {
           store.morphTick();

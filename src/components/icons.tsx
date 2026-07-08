@@ -24,6 +24,13 @@ export const StopIcon = ({ size = 20 }: IconProps) => (
   </svg>
 );
 
+export const PauseIcon = ({ size = 20 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none" />
+    <rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 // 曲調を変える: 2本の矢印で入れ替わりを表す
 export const TransformIcon = ({ size = 20 }: IconProps) => (
   <svg {...base(size)} aria-hidden="true">

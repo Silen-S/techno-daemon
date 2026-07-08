@@ -32,8 +32,20 @@ const adjustFeedback = (feedback: FeedbackWeights, lastMutation: LastMutation | 
   };
 };
 
+export type PlaybackState = "stopped" | "playing" | "paused";
+
+// 開始時のイントロでミュート解除していく順番
+const INTRO_ORDER: TrackId[] = ["snare", "hat", "bass", "synth"];
+
 type BeatStore = AppSnapshot & {
   isPlaying: boolean;
+  playbackState: PlaybackState;
+  // イントロ進行中なら次にミュート解除するINTRO_ORDERの添字
+  intro: number | null;
+  setPlaybackState: (playbackState: PlaybackState) => void;
+  beginIntro: () => void;
+  introTick: () => void;
+  clearIntro: () => void;
   activeStep: number;
   pending: AppSnapshot | null;
   history: AppSnapshot[];
@@ -310,6 +322,29 @@ export const useBeatStore = create<BeatStore>()(
           };
         }),
       setPlaying: (isPlaying) => set({ isPlaying }),
+      playbackState: "stopped",
+      intro: null,
+      setPlaybackState: (playbackState) => set({ playbackState, isPlaying: playbackState === "playing" }),
+      // 開始時はキックだけ残して全トラックをミュートする
+      beginIntro: () =>
+        set((state) => ({
+          intro: 0,
+          tracks: state.tracks.map((track) => ({ ...track, muted: track.id !== "kick" }))
+        })),
+      // 4小節ごとに1トラックずつミュート解除する
+      introTick: () =>
+        set((state) => {
+          if (state.intro === null) {
+            return {};
+          }
+          const trackId = INTRO_ORDER[state.intro];
+          const next = state.intro + 1;
+          return {
+            intro: next >= INTRO_ORDER.length ? null : next,
+            tracks: state.tracks.map((track) => (track.id === trackId ? { ...track, muted: false } : track))
+          };
+        }),
+      clearIntro: () => set({ intro: null }),
       setActiveStep: (activeStep) => set({ activeStep }),
       setBpm: (bpm) => set({ bpm: Math.max(80, Math.min(150, Math.round(bpm))) }),
       setIntent: (intent) =>
