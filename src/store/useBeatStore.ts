@@ -59,6 +59,8 @@ type BeatStore = AppSnapshot & {
   morph: MorphState | null;
   intentPrompt: PresetIntent[] | null;
   intentPromptEnabled: boolean;
+  allowEffectStacking: boolean;
+  setAllowEffectStacking: (allow: boolean) => void;
   setBar: (bar: number) => void;
   setAutoAccept: (autoAccept: AutoAcceptSetting) => void;
   setLang: (lang: Lang) => void;
@@ -100,18 +102,21 @@ const snapshotFromState = (state: BeatStore): AppSnapshot => ({
   tieSynth: state.tieSynth
 });
 
-type LegacyTrackState = Omit<TrackState, "steps" | "volume"> & {
+type LegacyTrackState = Omit<TrackState, "steps" | "volume" | "effects"> & {
   pattern?: boolean[];
   velocity?: number[];
   steps?: StepState[];
   volume?: number;
+  effects?: TrackState["effects"];
 };
 
 const normalizeTrack = (track: LegacyTrackState): TrackState => {
-  const { pattern, velocity, steps, volume, ...rest } = track;
+  const { pattern, velocity, steps, volume, effects, ...rest } = track;
   return {
     ...rest,
     volume: volume ?? 0.8,
+    // 旧保存データにはeffectsが無いので空で補完する
+    effects: effects ?? {},
     steps: steps?.length === STEPS ? steps.map((step) => ({ ...step })) : createSteps(pattern ?? [], velocity ?? [])
   };
 };
@@ -228,6 +233,8 @@ export const useBeatStore = create<BeatStore>()(
       morph: null,
       intentPrompt: null,
       intentPromptEnabled: true,
+      allowEffectStacking: true,
+      setAllowEffectStacking: (allowEffectStacking) => set({ allowEffectStacking }),
       setBar: (bar) =>
         set((state) => ({
           bar,
@@ -439,7 +446,7 @@ export const useBeatStore = create<BeatStore>()(
           }
 
           const current = normalizeSnapshot(snapshotFromState(state));
-          const result = mutateSnapshot(current, state.feedback);
+          const result = mutateSnapshot(current, state.feedback, state.allowEffectStacking);
           if (!result) {
             return {};
           }
@@ -507,7 +514,8 @@ export const useBeatStore = create<BeatStore>()(
         lang: state.lang,
         progressionIndex: state.progressionIndex,
         intentPromptEnabled: state.intentPromptEnabled,
-        tieSynth: state.tieSynth
+        tieSynth: state.tieSynth,
+        allowEffectStacking: state.allowEffectStacking
       }),
       merge: (persisted, current) => {
         // 破損した保存データでアプリが起動不能にならないようにする

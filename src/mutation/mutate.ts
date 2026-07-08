@@ -1,6 +1,7 @@
+import { INSERT_EFFECT_ORDER } from "@/audio/effects";
 import { STEPS } from "@/patterns/defaults";
 import { melodyPoolFor } from "@/theory/harmony";
-import type { AppSnapshot, FeedbackWeights, MutationTarget, PresetIntent, TrackState } from "@/types";
+import type { AppSnapshot, FeedbackWeights, InsertEffectId, MutationTarget, PresetIntent, TrackState } from "@/types";
 
 export type MutationResult = {
   snapshot: AppSnapshot;
@@ -43,16 +44,16 @@ export const densityRange: Record<TrackState["id"], [number, number]> = {
 };
 
 const intentAdjustments: Record<PresetIntent, Partial<Record<MutationTarget, number>>> = {
-  coding: { density: -0.08, filter: 0.08 },
-  relax: { density: -0.18, filter: -0.05 },
-  dark: { filter: -0.22, sound: 0.2 },
+  coding: { density: -0.08, effect: 0.08 },
+  relax: { density: -0.18, effect: -0.05 },
+  dark: { effect: -0.22, sound: 0.2 },
   cyber: { density: 0.08, velocity: 0.12 },
   hypnotic: { density: -0.1 },
-  acid: { filter: 0.1, velocity: 0.08 },
-  dub: { density: -0.14, filter: -0.1 },
-  euphoric: { density: 0.06, filter: 0.12, velocity: 0.1 },
-  industrial: { density: 0.12, filter: -0.15, sound: 0.15 },
-  dreamy: { density: -0.08, filter: 0.15 }
+  acid: { effect: 0.1, velocity: 0.08 },
+  dub: { density: -0.14, effect: -0.1 },
+  euphoric: { density: 0.06, effect: 0.12, velocity: 0.1 },
+  industrial: { density: 0.12, effect: -0.15, sound: 0.15 },
+  dreamy: { density: -0.08, effect: 0.15 }
 };
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
@@ -75,6 +76,7 @@ const weightedPickTarget = (targets: MutationTarget[], weights: FeedbackWeights)
 const cloneTracks = (tracks: TrackState[]): TrackState[] =>
   tracks.map((track) => ({
     ...track,
+    effects: { ...track.effects },
     steps: track.steps.map((step) => ({ ...step, lastMutated: false })),
     lastMutatedTarget: undefined
   }));
@@ -187,7 +189,34 @@ const applyDensity = (track: TrackState) => {
   return withAnchors(euclidean(hits, rotate), track.id);
 };
 
-export const mutateSnapshot = (snapshot: AppSnapshot, feedback: FeedbackWeights = {}): MutationResult | null => {
+// エフェクトmutation: filterか、いずれかのインサートエフェクトのかかり具合を動かす。
+// 重ねがけ不可の場合は対象のエフェクトだけ残して他を0にする
+const mutateEffect = (track: TrackState, adjustment: number, allowStacking: boolean) => {
+  // filterと各エフェクトを候補にする
+  const target: "filter" | InsertEffectId = pick(["filter", ...INSERT_EFFECT_ORDER] as const);
+  if (target === "filter") {
+    track.filter = clamp(track.filter + (Math.random() - 0.5) * 0.22 + adjustment);
+    return;
+  }
+  const current = track.effects[target] ?? 0;
+  const next = clamp(current + (Math.random() - 0.5) * 0.3 + 0.12 + adjustment);
+  const effects = { ...track.effects, [target]: next };
+  if (!allowStacking) {
+    // 重ねがけオフ: 今動かしたエフェクト以外は0にする
+    INSERT_EFFECT_ORDER.forEach((id) => {
+      if (id !== target) {
+        effects[id] = 0;
+      }
+    });
+  }
+  track.effects = effects;
+};
+
+export const mutateSnapshot = (
+  snapshot: AppSnapshot,
+  feedback: FeedbackWeights = {},
+  allowEffectStacking = true
+): MutationResult | null => {
   const tracks = cloneTracks(snapshot.tracks);
   const enabledTracks = tracks.filter((track) => track.mutationEnabled);
   if (enabledTracks.length === 0 || snapshot.mutationTargets.length === 0) {
@@ -209,13 +238,13 @@ export const mutateSnapshot = (snapshot: AppSnapshot, feedback: FeedbackWeights 
   }
 
   if (target === "sound") {
-    const pool = soundPools[track.id].filter((sound) => sound !== track.soundId);
-    track.soundId = pick(pool);
+    const soundPool = soundPools[track.id].filter((sound) => sound !== track.soundId);
+    track.soundId = pick(soundPool);
     track.filter = clamp(track.filter + adjustment * 0.4);
   }
 
-  if (target === "filter") {
-    track.filter = clamp(track.filter + (Math.random() - 0.5) * 0.22 + adjustment);
+  if (target === "effect") {
+    mutateEffect(track, adjustment, allowEffectStacking);
   }
 
   if (target === "density") {

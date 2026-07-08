@@ -24,6 +24,7 @@ type Labels = {
   on: string;
   off: string;
   tieHeading: string;
+  effectStackHeading: string;
   grooveHeading: string;
   grooveTitlePlaceholder: string;
   grooveMemoPlaceholder: string;
@@ -73,7 +74,7 @@ export const labels: Record<Lang, Labels> = {
     targets: {
       pattern: "pattern",
       sound: "sound",
-      filter: "filter",
+      effect: "effect",
       density: "density",
       velocity: "velocity"
     },
@@ -101,6 +102,7 @@ export const labels: Record<Lang, Labels> = {
     on: "On",
     off: "Off",
     tieHeading: "Lead note ties",
+    effectStackHeading: "Stack effects",
     grooveHeading: "My groove",
     grooveTitlePlaceholder: "Title",
     grooveMemoPlaceholder: "Memo",
@@ -148,7 +150,7 @@ export const labels: Record<Lang, Labels> = {
     targets: {
       pattern: "パターン",
       sound: "音色",
-      filter: "フィルター",
+      effect: "エフェクト",
       density: "密度",
       velocity: "強弱"
     },
@@ -176,6 +178,7 @@ export const labels: Record<Lang, Labels> = {
     on: "オン",
     off: "オフ",
     tieHeading: "リードの同音連結",
+    effectStackHeading: "エフェクトの重ねがけ",
     grooveHeading: "My groove",
     grooveTitlePlaceholder: "タイトル",
     grooveMemoPlaceholder: "メモ",

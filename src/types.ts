@@ -1,6 +1,25 @@
 export type TrackId = "kick" | "snare" | "hat" | "bass" | "synth";
 
-export type MutationTarget = "pattern" | "sound" | "filter" | "density" | "velocity";
+export type MutationTarget = "pattern" | "sound" | "effect" | "density" | "velocity";
+
+// 変化対象になるエフェクト。filterは従来のローパス、
+// delay/reverbは共有センド、残りはトラック毎のインサート
+export type EffectId =
+  | "filter"
+  | "delay"
+  | "reverb"
+  | "distortion"
+  | "bitcrusher"
+  | "chorus"
+  | "phaser"
+  | "tremolo"
+  | "autofilter"
+  | "autopanner";
+
+// filter以外のエフェクトはすべてトラック毎のインサートとして扱う
+export type InsertEffectId = Exclude<EffectId, "filter">;
+// filter以外のエフェクトのかかり具合(0..1)
+export type TrackEffects = Partial<Record<InsertEffectId, number>>;
 export type MutationInterval = "manual" | "4" | "8" | "16";
 // Mutation後に自動でAcceptするまでのループ(小節)数
 export type AutoAcceptSetting = "off" | "2" | "4" | "8";
@@ -20,6 +39,7 @@ export type TrackState = {
   name: string;
   soundId: string;
   filter: number;
+  effects: TrackEffects;
   density: number;
   volume: number;
   muted: boolean;

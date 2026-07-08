@@ -36,7 +36,7 @@ import {
 } from "@/theory/harmony";
 import type { AppSnapshot, AutoAcceptSetting, MutationInterval, MutationTarget, PresetIntent, TrackState } from "@/types";
 
-const mutationTargets: MutationTarget[] = ["pattern", "sound", "filter", "density", "velocity"];
+const mutationTargets: MutationTarget[] = ["pattern", "sound", "effect", "density", "velocity"];
 const intervals: MutationInterval[] = ["manual", "4", "8", "16"];
 const autoAccepts: AutoAcceptSetting[] = ["off", "2", "4", "8"];
 const intents = ALL_INTENTS;
@@ -559,6 +559,26 @@ export function NullbeatApp() {
           </div>
 
           <div className="panelBlock">
+            <h2>{t.effectStackHeading}</h2>
+            <div className="segments">
+              <button
+                className={state.allowEffectStacking ? "segment active" : "segment"}
+                onClick={() => state.setAllowEffectStacking(true)}
+                type="button"
+              >
+                {t.on}
+              </button>
+              <button
+                className={!state.allowEffectStacking ? "segment active" : "segment"}
+                onClick={() => state.setAllowEffectStacking(false)}
+                type="button"
+              >
+                {t.off}
+              </button>
+            </div>
+          </div>
+
+          <div className="panelBlock">
             <h2>{t.inputHeading}</h2>
             <input
               className="textInput"
@@ -700,13 +720,13 @@ function StepHeader({ activeStep }: { activeStep: number }) {
 const mutationColors: Record<MutationTarget, string> = {
   pattern: "#91f0b2",
   sound: "#c9a0f0",
-  filter: "#7ccce4",
+  effect: "#7ccce4",
   density: "#d9b56c",
   velocity: "#e07664"
 };
 
-// 音色・フィルターはステップ単位ではなくトラック全体にかかる変化
-const trackWideTargets: MutationTarget[] = ["sound", "filter"];
+// 音色・エフェクトはステップ単位ではなくトラック全体にかかる変化
+const trackWideTargets: MutationTarget[] = ["sound", "effect"];
 
 function TrackRow({
   activeStep,

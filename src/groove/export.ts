@@ -6,9 +6,10 @@ import {
   leadPresets,
   snarePresets
 } from "@/audio/engine";
+import { createInsertEffect, INSERT_EFFECT_ORDER } from "@/audio/effects";
 import { bassNoteForStep, chordForBar, KEY_LABEL, progressionFor } from "@/theory/harmony";
 import { STEPS } from "@/patterns/defaults";
-import type { AppSnapshot } from "@/types";
+import type { AppSnapshot, TrackId } from "@/types";
 
 // 「My groove」の書き出し。16小節分(コード進行込み)を
 // スクリプト(JSON)とMP3の両方で保存できるようにする。
@@ -87,19 +88,32 @@ const renderGrooveBuffer = async (snapshot: AppSnapshot): Promise<AudioBuffer> =
 
   const rendered = await Tone.Offline(async () => {
     const channel = new Tone.Channel({ volume: -8 }).toDestination();
-    const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.22, wet: 0.22 }).connect(channel);
-    const reverb = new Tone.Reverb({ decay: 2.8, wet: 0.14 }).connect(channel);
-    await reverb.ready;
 
-    const filters = {
-      kick: new Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(channel),
-      snare: new Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(reverb),
-      hat: new Tone.Filter({ type: "lowpass", frequency: 8000, rolloff: -12 }).connect(channel),
-      bass: new Tone.Filter({ type: "lowpass", frequency: 1200, rolloff: -24 }).connect(delay),
-      synth: new Tone.Filter({ type: "lowpass", frequency: 2600, rolloff: -12 }).connect(delay)
-    };
+    const trackIds: TrackId[] = ["kick", "snare", "hat", "bass", "synth"];
+    const filterFreqs: Record<TrackId, number> = { kick: 4000, snare: 4000, hat: 8000, bass: 1200, synth: 2600 };
 
+    // 再生エンジンと同じく 音源→エフェクト鎖→フィルター→channel を組む
+    type ToneNode = InstanceType<typeof Tone.Filter>;
+    const filters = {} as Record<TrackId, ToneNode>;
+    const chainHeads = {} as Record<TrackId, ToneNode>;
     const byId = Object.fromEntries(snapshot.tracks.map((track) => [track.id, track]));
+
+    for (const id of trackIds) {
+      const filter = new Tone.Filter({ type: "lowpass", frequency: filterFreqs[id], rolloff: -12 }).connect(channel);
+      filters[id] = filter;
+      let downstream: ToneNode = filter;
+      const track = byId[id];
+      for (let i = INSERT_EFFECT_ORDER.length - 1; i >= 0; i -= 1) {
+        const effectId = INSERT_EFFECT_ORDER[i];
+        const node = createInsertEffect(Tone, effectId) as unknown as ToneNode;
+        (node as unknown as { wet: { value: number } }).wet.value = Math.max(0, Math.min(1, track?.effects?.[effectId] ?? 0));
+        node.connect(downstream);
+        downstream = node;
+      }
+      chainHeads[id] = downstream;
+    }
+    // Reverbのインパルス生成完了を待つ
+    await new Promise((resolve) => setTimeout(resolve, 60));
 
     const kickTrack = byId.kick;
     const snareTrack = byId.snare;
@@ -131,17 +145,18 @@ const renderGrooveBuffer = async (snapshot: AppSnapshot): Promise<AudioBuffer> =
     }
 
     const kick = new Tone.MembraneSynth({
+      volume: 4,
       pitchDecay: kickPreset.pitchDecay,
       octaves: kickPreset.octaves,
       oscillator: { type: "sine" },
       envelope: { attack: 0.001, decay: kickPreset.decay, sustain: 0.01, release: 0.15 }
-    }).connect(filters.kick);
+    }).connect(chainHeads.kick);
 
     const snare = new Tone.NoiseSynth({
       volume: snarePreset.volume,
       noise: { type: snarePreset.noiseType },
       envelope: { attack: 0.001, decay: snarePreset.decay, sustain: 0.01, release: 0.08 }
-    }).connect(filters.snare);
+    }).connect(chainHeads.snare);
 
     const hat = new Tone.MetalSynth({
       envelope: { attack: 0.001, decay: hatPreset.decay, release: 0.015 },
@@ -149,24 +164,24 @@ const renderGrooveBuffer = async (snapshot: AppSnapshot): Promise<AudioBuffer> =
       modulationIndex: 18,
       resonance: 2800,
       octaves: 1.2
-    }).connect(filters.hat);
+    }).connect(chainHeads.hat);
     hat.frequency.value = hatPreset.frequency;
 
     const bass = new Tone.MonoSynth({
-      volume: 4,
+      volume: 8,
       oscillator: { type: bassPreset.oscillator },
       filter: { Q: 1.4, type: "lowpass", rolloff: -24 },
       envelope: { attack: 0.002, decay: 0.11, sustain: 0.18, release: 0.06 },
       filterEnvelope: { attack: 0.002, decay: 0.18, sustain: 0.18, release: 0.08, baseFrequency: 80, octaves: 2.4 }
-    }).connect(filters.bass);
+    }).connect(chainHeads.bass);
 
     const synth = new Tone.MonoSynth({
-      volume: 4,
+      volume: leadPreset.gain,
       oscillator: { type: leadPreset.oscillator },
       filter: { Q: 1.1, type: "lowpass", rolloff: -12 },
       envelope: { attack: 0.004, decay: leadPreset.decay, sustain: leadPreset.sustain, release: 0.12 },
       filterEnvelope: { attack: 0.004, decay: 0.16, sustain: 0.3, release: 0.14, baseFrequency: 400, octaves: 3 }
-    }).connect(filters.synth);
+    }).connect(chainHeads.synth);
 
     for (let bar = 1; bar <= GROOVE_BARS; bar += 1) {
       const chord = chordForBar(bar, snapshot.intent, snapshot.progressionIndex);

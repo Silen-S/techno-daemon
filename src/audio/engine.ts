@@ -1,5 +1,6 @@
+import { createInsertEffect, INSERT_EFFECT_ORDER } from "@/audio/effects";
 import { bassNoteForStep, chordForBar } from "@/theory/harmony";
-import type { PresetIntent, TrackId, TrackState } from "@/types";
+import type { InsertEffectId, PresetIntent, TrackId, TrackState } from "@/types";
 
 type ToneModule = typeof import("tone");
 
@@ -8,6 +9,8 @@ type EngineOptions = {
   onBar: (bar: number) => void;
 };
 
+type EffectNode = { wet: { value: number }; connect: (node: unknown) => unknown; dispose: () => void };
+
 type SynthNodes = {
   kick: import("tone").MembraneSynth;
   snare: import("tone").NoiseSynth;
@@ -15,9 +18,9 @@ type SynthNodes = {
   bass: import("tone").MonoSynth;
   synth: import("tone").MonoSynth;
   filters: Record<TrackId, import("tone").Filter>;
+  // トラック毎のインサートエフェクト鎖
+  effects: Record<TrackId, Record<InsertEffectId, EffectNode>>;
   channel: import("tone").Channel;
-  delay: import("tone").FeedbackDelay;
-  reverb: import("tone").Reverb;
 };
 
 type KickPreset = { pitchDecay: number; octaves: number; decay: number; note: string };
@@ -54,13 +57,14 @@ export const bassPresets: Record<string, BassPreset> = {
   "cold acid": { oscillator: "sawtooth", q: 6 }
 };
 
-type LeadPreset = { oscillator: "sawtooth" | "square" | "triangle" | "fatsawtooth"; decay: number; sustain: number };
+type LeadPreset = { oscillator: "sawtooth" | "square" | "triangle" | "fatsawtooth"; decay: number; sustain: number; gain: number };
 
+// gainは音色ごとの基準音量(dB)。triangleは倍音が少なく小さく聞こえるため補正する
 export const leadPresets: Record<string, LeadPreset> = {
-  "saw stab": { oscillator: "sawtooth", decay: 0.18, sustain: 0.12 },
-  "square lead": { oscillator: "square", decay: 0.16, sustain: 0.3 },
-  "soft pluck": { oscillator: "triangle", decay: 0.12, sustain: 0.02 },
-  hoover: { oscillator: "fatsawtooth", decay: 0.22, sustain: 0.25 }
+  "saw stab": { oscillator: "sawtooth", decay: 0.18, sustain: 0.12, gain: 4 },
+  "square lead": { oscillator: "square", decay: 0.16, sustain: 0.3, gain: 2 },
+  "soft pluck": { oscillator: "triangle", decay: 0.12, sustain: 0.02, gain: 10 },
+  hoover: { oscillator: "fatsawtooth", decay: 0.22, sustain: 0.25, gain: 3 }
 };
 
 // filter値(0..1)を対数的にカットオフ周波数へ写像する
@@ -103,30 +107,47 @@ export class BeatEngine {
     await this.Tone.start();
 
     const channel = new this.Tone.Channel({ volume: -8 }).toDestination();
-    // wetを明示しないと1.0(ディレイ音のみ)になり、接続先の音が丸ごと遅れて聞こえる
-    const delay = new this.Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.22, wet: 0.22 }).connect(channel);
-    const reverb = new this.Tone.Reverb({ decay: 2.8, wet: 0.14 }).connect(channel);
-    await reverb.ready;
 
-    const filters: Record<TrackId, import("tone").Filter> = {
-      kick: new this.Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(channel),
-      snare: new this.Tone.Filter({ type: "lowpass", frequency: 4000, rolloff: -12 }).connect(reverb),
-      hat: new this.Tone.Filter({ type: "lowpass", frequency: 8000, rolloff: -12 }).connect(channel),
-      bass: new this.Tone.Filter({ type: "lowpass", frequency: 1200, rolloff: -24 }).connect(delay),
-      synth: new this.Tone.Filter({ type: "lowpass", frequency: 2600, rolloff: -12 }).connect(delay)
-    };
+    const trackIds: TrackId[] = ["kick", "snare", "hat", "bass", "synth"];
+    const filterFreqs: Record<TrackId, number> = { kick: 4000, snare: 4000, hat: 8000, bass: 1200, synth: 2600 };
+
+    // 各トラック: 音源 → インサートエフェクト鎖 → ローパスフィルター → channel
+    const filters = {} as Record<TrackId, import("tone").Filter>;
+    const effects = {} as Record<TrackId, Record<InsertEffectId, EffectNode>>;
+    for (const id of trackIds) {
+      const filter = new this.Tone.Filter({ type: "lowpass", frequency: filterFreqs[id], rolloff: -12 }).connect(channel);
+      filters[id] = filter;
+      const chain = {} as Record<InsertEffectId, EffectNode>;
+      // フィルターから逆順に繋いでいき、鎖の先頭を音源の接続先にする
+      let downstream: EffectNode | import("tone").Filter = filter;
+      for (let i = INSERT_EFFECT_ORDER.length - 1; i >= 0; i -= 1) {
+        const effectId = INSERT_EFFECT_ORDER[i];
+        const node = createInsertEffect(this.Tone, effectId);
+        node.connect(downstream);
+        chain[effectId] = node;
+        downstream = node;
+      }
+      effects[id] = chain;
+    }
+    await Promise.all(
+      trackIds.map((id) => (effects[id].reverb as unknown as { ready?: Promise<unknown> }).ready ?? Promise.resolve())
+    );
+
+    // 音源はエフェクト鎖の先頭(distortion)に接続する
+    const chainHead = (id: TrackId) => effects[id][INSERT_EFFECT_ORDER[0]] as unknown as import("tone").Filter;
 
     const kick = new this.Tone.MembraneSynth({
+      volume: 4,
       pitchDecay: 0.025,
       octaves: 6,
       oscillator: { type: "sine" },
       envelope: { attack: 0.001, decay: 0.34, sustain: 0.01, release: 0.15 }
-    }).connect(filters.kick);
+    }).connect(chainHead("kick"));
 
     const snare = new this.Tone.NoiseSynth({
       noise: { type: "white" },
       envelope: { attack: 0.001, decay: 0.12, sustain: 0.01, release: 0.08 }
-    }).connect(filters.snare);
+    }).connect(chainHead("snare"));
 
     const hat = new this.Tone.MetalSynth({
       envelope: { attack: 0.001, decay: 0.055, release: 0.015 },
@@ -134,16 +155,16 @@ export class BeatEngine {
       modulationIndex: 18,
       resonance: 2800,
       octaves: 1.2
-    }).connect(filters.hat);
+    }).connect(chainHead("hat"));
     hat.frequency.value = 240;
 
     const bass = new this.Tone.MonoSynth({
-      volume: 4,
+      volume: 8,
       oscillator: { type: "square" },
       filter: { Q: 1.4, type: "lowpass", rolloff: -24 },
       envelope: { attack: 0.002, decay: 0.11, sustain: 0.18, release: 0.06 },
       filterEnvelope: { attack: 0.002, decay: 0.18, sustain: 0.18, release: 0.08, baseFrequency: 80, octaves: 2.4 }
-    }).connect(filters.bass);
+    }).connect(chainHead("bass"));
 
     const synth = new this.Tone.MonoSynth({
       volume: 4,
@@ -151,9 +172,9 @@ export class BeatEngine {
       filter: { Q: 1.1, type: "lowpass", rolloff: -12 },
       envelope: { attack: 0.004, decay: 0.18, sustain: 0.12, release: 0.12 },
       filterEnvelope: { attack: 0.004, decay: 0.16, sustain: 0.3, release: 0.14, baseFrequency: 400, octaves: 3 }
-    }).connect(filters.synth);
+    }).connect(chainHead("synth"));
 
-    this.nodes = { kick, snare, hat, bass, synth, filters, channel, delay, reverb };
+    this.nodes = { kick, snare, hat, bass, synth, filters, effects, channel };
     this.appliedSoundIds = {};
     if (process.env.NODE_ENV !== "production") {
       // 開発時の出力確認用にToneモジュールを公開する
@@ -209,9 +230,10 @@ export class BeatEngine {
     this.sequence?.dispose();
     this.sequence = null;
     if (this.nodes) {
-      const { filters, ...rest } = this.nodes;
+      const { filters, effects, ...rest } = this.nodes;
       Object.values(rest).forEach((node) => node.dispose());
       Object.values(filters).forEach((node) => node.dispose());
+      Object.values(effects).forEach((chain) => Object.values(chain).forEach((node) => node.dispose()));
       this.nodes = null;
     }
   }
@@ -224,6 +246,17 @@ export class BeatEngine {
     }
 
     this.tracks.forEach((track) => {
+      // 各エフェクトのかかり具合(wet)を反映する
+      const chain = nodes.effects[track.id];
+      if (chain) {
+        INSERT_EFFECT_ORDER.forEach((effectId) => {
+          const node = chain[effectId];
+          if (node) {
+            node.wet.value = Math.max(0, Math.min(1, track.effects[effectId] ?? 0));
+          }
+        });
+      }
+
       if (track.id === "kick") {
         nodes.filters.kick.frequency.rampTo(filterFrequency(track.filter, 320, 9000), 0.06);
         const preset = kickPresets[track.soundId];
@@ -268,6 +301,7 @@ export class BeatEngine {
         const preset = leadPresets[track.soundId];
         if (preset && this.appliedSoundIds.synth !== track.soundId) {
           nodes.synth.set({
+            volume: preset.gain,
             oscillator: { type: preset.oscillator },
             envelope: { decay: preset.decay, sustain: preset.sustain }
           });
