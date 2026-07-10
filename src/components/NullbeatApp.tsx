@@ -710,16 +710,15 @@ function IntentPromptDialog({
   const [secondsLeft, setSecondsLeft] = useState(INTENT_PROMPT_TIMEOUT_SEC);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsLeft((seconds) => {
-        if (seconds <= 1) {
-          onClose();
-          return 0;
-        }
-        return seconds - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
+    // 表示の減算と自動クローズは分ける。
+    // setStateの更新関数の中でonCloseを呼ぶと、描画中に別コンポーネントを
+    // 更新することになりReactが警告を出すため
+    const ticker = setInterval(() => setSecondsLeft((seconds) => Math.max(0, seconds - 1)), 1000);
+    const closer = setTimeout(onClose, INTENT_PROMPT_TIMEOUT_SEC * 1000);
+    return () => {
+      clearInterval(ticker);
+      clearTimeout(closer);
+    };
   }, [onClose]);
 
   return (
