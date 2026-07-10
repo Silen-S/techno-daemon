@@ -1,7 +1,12 @@
 import type { InsertEffectId } from "@/types";
 
 type ToneModule = typeof import("tone");
-type ToneEffect = { wet: { value: number }; connect: (node: unknown) => unknown; dispose: () => void };
+export type ToneEffect = {
+  wet: { value: number };
+  connect: (node: unknown) => unknown;
+  disconnect: () => unknown;
+  dispose: () => void;
+};
 
 // テクノでよく使うインサートエフェクト。かかり具合(0..1)は各エフェクトのwetに写像する。
 // トラックの音源→(この順で直列)→ローパスフィルター→センド の順に繋ぐ。
@@ -45,9 +50,11 @@ const build = (Tone: ToneModule, id: InsertEffectId): ToneEffect => {
   }
 };
 
-export const createInsertEffect = (Tone: ToneModule, id: InsertEffectId): ToneEffect => {
+// エフェクトは常時つなぎっぱなしにするとCPUを食い続ける
+// (コンボリューションやLFOがwet=0でも動き続け、スマホの発熱につながる)。
+// かかり具合が0より大きいトラックにだけ、その都度生成して挿入する。
+export const createInsertEffect = (Tone: ToneModule, id: InsertEffectId, amount: number): ToneEffect => {
   const node = build(Tone, id);
-  // 既定はバイパス(wet=0)。かかり具合はengine側でwetに反映する
-  node.wet.value = 0;
+  node.wet.value = Math.max(0, Math.min(1, amount));
   return node;
 };

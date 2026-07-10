@@ -1,4 +1,4 @@
-import { createInsertEffect, INSERT_EFFECT_ORDER } from "@/audio/effects";
+import { createInsertEffect, INSERT_EFFECT_ORDER, type ToneEffect } from "@/audio/effects";
 import { STEPS } from "@/patterns/defaults";
 import { bassNoteForStep, chordForBar } from "@/theory/harmony";
 import type { InsertEffectId, PresetIntent, TrackId, TrackState } from "@/types";
@@ -10,7 +10,13 @@ type EngineOptions = {
   onBar: (bar: number) => void;
 };
 
-type EffectNode = { wet: { value: number }; connect: (node: unknown) => unknown; dispose: () => void };
+type EffectNode = ToneEffect;
+
+// 音源(エフェクト鎖の入口になるノード)
+type SourceNode = { connect: (node: unknown) => unknown; disconnect: () => unknown };
+
+// トラック毎に、いま有効なエフェクトだけを直列で保持する
+type EffectChain = { ids: InsertEffectId[]; nodes: EffectNode[] };
 
 type SynthNodes = {
   kick: import("tone").MembraneSynth;
@@ -19,8 +25,7 @@ type SynthNodes = {
   bass: import("tone").MonoSynth;
   synth: import("tone").MonoSynth;
   filters: Record<TrackId, import("tone").Filter>;
-  // トラック毎のインサートエフェクト鎖
-  effects: Record<TrackId, Record<InsertEffectId, EffectNode>>;
+  chains: Record<TrackId, EffectChain>;
   channel: import("tone").Channel;
 };
 
@@ -86,18 +91,35 @@ export class BeatEngine {
   private bar = 0;
   private options: EngineOptions;
   private appliedSoundIds: Partial<Record<TrackId, string>> = {};
+  // 再生中(一時停止・停止していない)かどうか
+  private shouldBeRunning = false;
+  private rawContext: AudioContext | null = null;
 
   constructor(options: EngineOptions) {
     this.options = options;
   }
 
   // タブ非表示中はスケジューラの先読みを増やして、
-  // バックグラウンドでも音が途切れないようにする
+  // バックグラウンドでも音が途切れないようにする。
+  // ブラウザがタブ切替でAudioContextを中断することがあるため、
+  // 再生中なら必ず復帰させる
   private handleVisibility = () => {
     if (!this.Tone) {
       return;
     }
     this.Tone.getContext().lookAhead = document.hidden ? 0.8 : 0.1;
+    this.resumeIfNeeded();
+  };
+
+  // 再生中のはずなのに中断されていたら復帰させる
+  private resumeIfNeeded = () => {
+    if (!this.Tone || !this.shouldBeRunning) {
+      return;
+    }
+    const context = this.Tone.getContext();
+    if (context.state !== "running") {
+      void context.resume();
+    }
   };
 
   async init() {
@@ -113,30 +135,17 @@ export class BeatEngine {
     const trackIds: TrackId[] = ["kick", "snare", "hat", "bass", "synth"];
     const filterFreqs: Record<TrackId, number> = { kick: 4000, snare: 4000, hat: 8000, bass: 1200, synth: 2600 };
 
-    // 各トラック: 音源 → インサートエフェクト鎖 → ローパスフィルター → channel
+    // 各トラック: 音源 → (有効なエフェクトだけ) → ローパスフィルター → channel
+    // エフェクトは既定では1つも作らない(applyTrackSettingsで必要になった時だけ生成する)
     const filters = {} as Record<TrackId, import("tone").Filter>;
-    const effects = {} as Record<TrackId, Record<InsertEffectId, EffectNode>>;
+    const chains = {} as Record<TrackId, EffectChain>;
     for (const id of trackIds) {
-      const filter = new this.Tone.Filter({ type: "lowpass", frequency: filterFreqs[id], rolloff: -12 }).connect(channel);
-      filters[id] = filter;
-      const chain = {} as Record<InsertEffectId, EffectNode>;
-      // フィルターから逆順に繋いでいき、鎖の先頭を音源の接続先にする
-      let downstream: EffectNode | import("tone").Filter = filter;
-      for (let i = INSERT_EFFECT_ORDER.length - 1; i >= 0; i -= 1) {
-        const effectId = INSERT_EFFECT_ORDER[i];
-        const node = createInsertEffect(this.Tone, effectId);
-        node.connect(downstream);
-        chain[effectId] = node;
-        downstream = node;
-      }
-      effects[id] = chain;
+      filters[id] = new this.Tone.Filter({ type: "lowpass", frequency: filterFreqs[id], rolloff: -12 }).connect(channel);
+      chains[id] = { ids: [], nodes: [] };
     }
-    await Promise.all(
-      trackIds.map((id) => (effects[id].reverb as unknown as { ready?: Promise<unknown> }).ready ?? Promise.resolve())
-    );
 
-    // 音源はエフェクト鎖の先頭(distortion)に接続する
-    const chainHead = (id: TrackId) => effects[id][INSERT_EFFECT_ORDER[0]] as unknown as import("tone").Filter;
+    // エフェクトが無いあいだ、音源はフィルターへ直結する
+    const chainHead = (id: TrackId) => filters[id];
 
     const kick = new this.Tone.MembraneSynth({
       volume: 4,
@@ -176,13 +185,20 @@ export class BeatEngine {
       filterEnvelope: { attack: 0.004, decay: 0.16, sustain: 0.3, release: 0.14, baseFrequency: 400, octaves: 3 }
     }).connect(chainHead("synth"));
 
-    this.nodes = { kick, snare, hat, bass, synth, filters, effects, channel };
+    this.nodes = { kick, snare, hat, bass, synth, filters, chains, channel };
     this.appliedSoundIds = {};
     if (process.env.NODE_ENV !== "production") {
-      // 開発時の出力確認用にToneモジュールを公開する
+      // 開発時の出力確認用にToneモジュールと有効なエフェクト構成を公開する
       (globalThis as { __toneDebug?: ToneModule }).__toneDebug = this.Tone;
+      (globalThis as { __activeEffects?: () => Record<string, InsertEffectId[]> }).__activeEffects = () =>
+        Object.fromEntries(
+          (Object.keys(this.nodes?.chains ?? {}) as TrackId[]).map((id) => [id, this.nodes!.chains[id].ids])
+        );
     }
     document.addEventListener("visibilitychange", this.handleVisibility);
+    // ブラウザ側の都合で中断されたときにも復帰できるようにする
+    this.rawContext = this.Tone.getContext().rawContext as unknown as AudioContext;
+    this.rawContext.addEventListener?.("statechange", this.resumeIfNeeded);
     this.handleVisibility();
     this.Tone.Transport.bpm.value = this.bpm;
     this.applyTrackSettings();
@@ -213,15 +229,23 @@ export class BeatEngine {
 
   async play() {
     await this.init();
+    this.shouldBeRunning = true;
+    // 中断された状態のまま start しても鳴らないため、先に復帰させる
+    const context = this.Tone?.getContext();
+    if (context && context.state !== "running") {
+      await context.resume();
+    }
     this.Tone?.Transport.start();
   }
 
   // 再生位置を保ったまま止める(再開は play() で行う)
   pause() {
+    this.shouldBeRunning = false;
     this.Tone?.Transport.pause();
   }
 
   stop() {
+    this.shouldBeRunning = false;
     if (this.Tone) {
       this.Tone.Transport.stop();
       this.Tone.Transport.position = 0;
@@ -232,7 +256,10 @@ export class BeatEngine {
   }
 
   dispose() {
+    this.shouldBeRunning = false;
     document.removeEventListener("visibilitychange", this.handleVisibility);
+    this.rawContext?.removeEventListener?.("statechange", this.resumeIfNeeded);
+    this.rawContext = null;
     if (this.Tone) {
       this.Tone.Transport.stop();
       this.Tone.Transport.cancel();
@@ -240,12 +267,72 @@ export class BeatEngine {
     this.sequence?.dispose();
     this.sequence = null;
     if (this.nodes) {
-      const { filters, effects, ...rest } = this.nodes;
+      const { filters, chains, ...rest } = this.nodes;
       Object.values(rest).forEach((node) => node.dispose());
       Object.values(filters).forEach((node) => node.dispose());
-      Object.values(effects).forEach((chain) => Object.values(chain).forEach((node) => node.dispose()));
+      Object.values(chains).forEach((chain) => chain.nodes.forEach((node) => node.dispose()));
       this.nodes = null;
     }
+  }
+
+  private sourceFor(trackId: TrackId): SourceNode | null {
+    const nodes = this.nodes;
+    if (!nodes) {
+      return null;
+    }
+    const map: Record<TrackId, SourceNode> = {
+      kick: nodes.kick as unknown as SourceNode,
+      snare: nodes.snare as unknown as SourceNode,
+      hat: nodes.hat as unknown as SourceNode,
+      bass: nodes.bass as unknown as SourceNode,
+      synth: nodes.synth as unknown as SourceNode
+    };
+    return map[trackId];
+  }
+
+  // かかり具合が0より大きいエフェクトだけを直列に挿入する。
+  // 構成が変わったときだけ配線を組み直し、それ以外はwetを更新するだけにする
+  private applyEffectChain(track: TrackState) {
+    const nodes = this.nodes;
+    const Tone = this.Tone;
+    if (!nodes || !Tone) {
+      return;
+    }
+
+    const chain = nodes.chains[track.id];
+    const desired = INSERT_EFFECT_ORDER.filter((id) => (track.effects[id] ?? 0) > 0.001);
+    const sameChain = desired.length === chain.ids.length && desired.every((id, index) => chain.ids[index] === id);
+
+    if (sameChain) {
+      chain.nodes.forEach((node, index) => {
+        node.wet.value = Math.max(0, Math.min(1, track.effects[chain.ids[index]] ?? 0));
+      });
+      return;
+    }
+
+    const source = this.sourceFor(track.id);
+    const filter = nodes.filters[track.id];
+    if (!source) {
+      return;
+    }
+
+    // 旧構成を切り離して破棄する(不要なノードはCPUを食い続けるため必ず捨てる)
+    source.disconnect();
+    chain.nodes.forEach((node) => {
+      node.disconnect();
+      node.dispose();
+    });
+
+    const created = desired.map((id) => createInsertEffect(Tone, id, track.effects[id] ?? 0));
+    let upstream: SourceNode = source;
+    created.forEach((node) => {
+      upstream.connect(node);
+      upstream = node as unknown as SourceNode;
+    });
+    upstream.connect(filter);
+
+    chain.ids = desired;
+    chain.nodes = created;
   }
 
   // soundId・filterの変更をシンセパラメータへ反映する
@@ -256,16 +343,7 @@ export class BeatEngine {
     }
 
     this.tracks.forEach((track) => {
-      // 各エフェクトのかかり具合(wet)を反映する
-      const chain = nodes.effects[track.id];
-      if (chain) {
-        INSERT_EFFECT_ORDER.forEach((effectId) => {
-          const node = chain[effectId];
-          if (node) {
-            node.wet.value = Math.max(0, Math.min(1, track.effects[effectId] ?? 0));
-          }
-        });
-      }
+      this.applyEffectChain(track);
 
       if (track.id === "kick") {
         nodes.filters.kick.frequency.rampTo(filterFrequency(track.filter, 320, 9000), 0.06);

@@ -105,10 +105,14 @@ const renderGrooveBuffer = async (snapshot: AppSnapshot): Promise<AudioBuffer> =
       filters[id] = filter;
       let downstream: ToneNode = filter;
       const track = byId[id];
+      // かかり具合が0のエフェクトは作らない(再生側と同じ構成)
       for (let i = INSERT_EFFECT_ORDER.length - 1; i >= 0; i -= 1) {
         const effectId = INSERT_EFFECT_ORDER[i];
-        const node = createInsertEffect(Tone, effectId) as unknown as ToneNode;
-        (node as unknown as { wet: { value: number } }).wet.value = Math.max(0, Math.min(1, track?.effects?.[effectId] ?? 0));
+        const amount = track?.effects?.[effectId] ?? 0;
+        if (amount <= 0.001) {
+          continue;
+        }
+        const node = createInsertEffect(Tone, effectId, amount) as unknown as ToneNode;
         node.connect(downstream);
         downstream = node;
       }
