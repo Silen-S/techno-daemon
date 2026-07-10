@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createSteps, defaultSnapshot, defaultTracks, STEPS } from "@/patterns/defaults";
+import { normalizeLoopBars, resizeTrackSteps } from "@/patterns/loop";
 import { mutateSnapshot } from "@/mutation/mutate";
 import { createMorph, createMorphWithTarget, morphTracks, type MorphState } from "@/mutation/transform";
 import { generateArrangementWithAI } from "@/ai/gemini";
@@ -44,6 +45,7 @@ type BeatStore = AppSnapshot & {
   intro: number | null;
   setPlaybackState: (playbackState: PlaybackState) => void;
   setTieSynth: (tieSynth: boolean) => void;
+  setLoopBars: (loopBars: number) => void;
   beginIntro: () => void;
   introTick: () => void;
   clearIntro: () => void;
@@ -99,7 +101,8 @@ const snapshotFromState = (state: BeatStore): AppSnapshot => ({
   moodText: state.moodText,
   imageTone: state.imageTone,
   progressionIndex: state.progressionIndex,
-  tieSynth: state.tieSynth
+  tieSynth: state.tieSynth,
+  loopBars: state.loopBars
 });
 
 type LegacyTrackState = Omit<TrackState, "steps" | "volume" | "effects"> & {
@@ -125,9 +128,13 @@ const normalizeSnapshot = (snapshot: AppSnapshot): AppSnapshot => {
   const tracks = snapshot.tracks.map((track) => normalizeTrack(track as LegacyTrackState));
   // 旧バージョンの保存データに存在しないトラック(synthなど)をデフォルトから補完する
   const missing = defaultTracks.filter((track) => !tracks.some((item) => item.id === track.id));
+  // 全トラックのステップ配列をループ長に必ず揃える
+  const loopBars = normalizeLoopBars(snapshot.loopBars);
+  const all = [...tracks, ...missing.map((track) => normalizeTrack(track as LegacyTrackState))];
   return {
     ...snapshot,
-    tracks: [...tracks, ...missing.map((track) => normalizeTrack(track as LegacyTrackState))]
+    loopBars,
+    tracks: all.map((track) => resizeTrackSteps(track, loopBars))
   };
 };
 
@@ -335,6 +342,18 @@ export const useBeatStore = create<BeatStore>()(
       intro: null,
       setPlaybackState: (playbackState) => set({ playbackState, isPlaying: playbackState === "playing" }),
       setTieSynth: (tieSynth) => set({ tieSynth }),
+      // ループ長を変更し、全トラックのステップ配列を新しい長さへ揃える。
+      // 拡張時は既存ループを複製し、縮小時は先頭の小節だけ残す
+      setLoopBars: (loopBars) =>
+        set((state) => {
+          const bars = normalizeLoopBars(loopBars);
+          return {
+            loopBars: bars,
+            tracks: state.tracks.map((track) => resizeTrackSteps(track, bars)),
+            pending: null,
+            pendingSinceBar: null
+          };
+        }),
       // 開始時はキックだけ残して全トラックをミュートする
       beginIntro: () =>
         set((state) => ({
@@ -515,7 +534,8 @@ export const useBeatStore = create<BeatStore>()(
         progressionIndex: state.progressionIndex,
         intentPromptEnabled: state.intentPromptEnabled,
         tieSynth: state.tieSynth,
-        allowEffectStacking: state.allowEffectStacking
+        allowEffectStacking: state.allowEffectStacking,
+        loopBars: state.loopBars
       }),
       merge: (persisted, current) => {
         // 破損した保存データでアプリが起動不能にならないようにする

@@ -81,4 +81,6 @@ export type AppSnapshot = {
   progressionIndex: number;
   // リードシンセで連続する同音を1つの長い音として発音する
   tieSynth: boolean;
+  // パターンのループ長(小節数)。ステップ配列は loopBars * 16 個になる
+  loopBars: number;
 };

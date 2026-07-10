@@ -213,6 +213,36 @@ h2 {
   min-width: 880px;
 }
 
+/* 複数小節ループのページ切替 */
+.pageBar {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  padding: 0 0 12px;
+}
+
+.pageBar > span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.pageBar .segment {
+  min-height: 30px;
+  min-width: 36px;
+  padding: 0 8px;
+}
+
+/* いま鳴っている小節のページを示す */
+.pageBar .segment.sounding {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.pageBar .segment.active.sounding {
+  color: var(--green);
+}
+
 .stepHeader {
   color: #64706a;
   font-size: 11px;

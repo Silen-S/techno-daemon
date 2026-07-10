@@ -1,7 +1,7 @@
 import { INSERT_EFFECT_ORDER } from "@/audio/effects";
 import { STEPS } from "@/patterns/defaults";
 import { melodyPoolFor } from "@/theory/harmony";
-import type { AppSnapshot, FeedbackWeights, InsertEffectId, MutationTarget, PresetIntent, TrackState } from "@/types";
+import type { AppSnapshot, FeedbackWeights, InsertEffectId, MutationTarget, PresetIntent, StepState, TrackState } from "@/types";
 
 export type MutationResult = {
   snapshot: AppSnapshot;
@@ -228,12 +228,23 @@ export const mutateSnapshot = (
   const adjustment = intentAdjustments[snapshot.intent][target] ?? 0;
   const pool = melodyPoolFor(snapshot.intent);
 
+  // 複数小節ループでは1小節(16ステップ)ずつ変化させる。
+  // 対象の小節を切り出して既存の1小節向けロジックを適用し、書き戻す
+  const bars = Math.max(1, Math.floor(track.steps.length / STEPS));
+  const start = Math.floor(Math.random() * bars) * STEPS;
+  const barTrack: TrackState = { ...track, steps: track.steps.slice(start, start + STEPS) };
+  const writeBar = (barSteps: StepState[]) => {
+    track.steps = track.steps.map((step, index) =>
+      index >= start && index < start + STEPS ? barSteps[index - start] : step
+    );
+  };
+
   if (target === "pattern") {
     // シンセはリズム変更とメロディー変更を半々で行う
     if (track.id === "synth" && Math.random() > 0.5) {
-      track.steps = mutateMelody(track, pool);
+      writeBar(mutateMelody(barTrack, pool));
     } else {
-      Object.assign(track, applyPattern(track, mutatePattern(track), pool));
+      writeBar(applyPattern(barTrack, mutatePattern(barTrack), pool).steps);
     }
   }
 
@@ -249,11 +260,11 @@ export const mutateSnapshot = (
 
   if (target === "density") {
     track.density = clamp(track.density + (Math.random() - 0.5) * 0.2 + adjustment, 0.18, 0.96);
-    Object.assign(track, applyPattern(track, applyDensity(track), pool));
+    writeBar(applyPattern(barTrack, applyDensity(barTrack), pool).steps);
   }
 
   if (target === "velocity") {
-    track.steps = mutateVelocity(track);
+    writeBar(mutateVelocity(barTrack));
   }
 
   track.lastMutatedTarget = target;

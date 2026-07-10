@@ -1,4 +1,5 @@
 import { createInsertEffect, INSERT_EFFECT_ORDER } from "@/audio/effects";
+import { STEPS } from "@/patterns/defaults";
 import { bassNoteForStep, chordForBar } from "@/theory/harmony";
 import type { InsertEffectId, PresetIntent, TrackId, TrackState } from "@/types";
 
@@ -80,6 +81,7 @@ export class BeatEngine {
   private intent: PresetIntent = "coding";
   private progressionIndex = 0;
   private tieSynth = true;
+  private loopBars = 1;
   private step = 0;
   private bar = 0;
   private options: EngineOptions;
@@ -189,7 +191,14 @@ export class BeatEngine {
     this.sequence.start(0);
   }
 
-  update(tracks: TrackState[], bpm: number, intent: PresetIntent, progressionIndex: number, tieSynth: boolean) {
+  update(
+    tracks: TrackState[],
+    bpm: number,
+    intent: PresetIntent,
+    progressionIndex: number,
+    tieSynth: boolean,
+    loopBars: number
+  ) {
     this.tracks = tracks;
     if (this.Tone && this.bpm !== bpm) {
       this.Tone.Transport.bpm.rampTo(bpm, 0.08);
@@ -198,6 +207,7 @@ export class BeatEngine {
     this.intent = intent;
     this.progressionIndex = progressionIndex;
     this.tieSynth = tieSynth;
+    this.loopBars = Math.max(1, loopBars);
     this.applyTrackSettings();
   }
 
@@ -311,10 +321,6 @@ export class BeatEngine {
     });
   }
 
-  private shouldTrigger(track: TrackState, step: number) {
-    return !track.muted && !!track.steps[step]?.enabled;
-  }
-
   private tick(time: number, step: number) {
     if (!this.Tone || !this.nodes) {
       return;
@@ -328,21 +334,27 @@ export class BeatEngine {
       this.options.onBar(this.bar);
     }
 
+    // ループ内の現在小節(0始まり)と、パターン配列上の絶対ステップ番号。
+    // ループ長が1小節ならこれまでどおり abs === step になる
+    const bars = Math.max(1, this.loopBars);
+    const barInLoop = (((this.bar - 1) % bars) + bars) % bars;
+    const abs = barInLoop * STEPS + step;
+
     // シーケンサーのコールバックは先読みで早めに呼ばれるため、
     // 表示更新は実際の発音時刻に合わせて行う。
     // Tone.DrawはrequestAnimationFrameでしかイベントを消化しないため、
     // タブ非表示中にスケジュールすると無限に蓄積してメモリリークになる。
     // 非表示中は画面も見えないので表示更新自体を止める
     if (!document.hidden) {
-      this.Tone.Draw.schedule(() => this.options.onStep(step), time);
+      this.Tone.Draw.schedule(() => this.options.onStep(abs), time);
     }
 
     this.tracks.forEach((track) => {
-      if (!this.shouldTrigger(track, step)) {
+      if (track.muted || !track.steps[abs]?.enabled) {
         return;
       }
 
-      const velocity = (track.steps[step]?.velocity ?? 0.55) * track.volume;
+      const velocity = (track.steps[abs]?.velocity ?? 0.55) * track.volume;
 
       if (track.id === "kick") {
         const note = kickPresets[track.soundId]?.note ?? "C2";
@@ -364,17 +376,17 @@ export class BeatEngine {
       }
 
       if (track.id === "synth") {
-        const note = track.steps[step]?.note ?? "A3";
+        const note = track.steps[abs]?.note ?? "A3";
         if (this.tieSynth) {
           // 直前が同音なら継続中なので発音しない
-          const prev = step > 0 ? track.steps[step - 1] : undefined;
+          const prev = abs > 0 ? track.steps[abs - 1] : undefined;
           if (prev?.enabled && (prev.note ?? "A3") === note) {
             return;
           }
           // 連続する同音の数だけ音を伸ばす(4連続=4分音符)
           let count = 1;
-          while (step + count < track.steps.length) {
-            const nextStep = track.steps[step + count];
+          while (abs + count < track.steps.length) {
+            const nextStep = track.steps[abs + count];
             if (!nextStep?.enabled || (nextStep.note ?? "A3") !== note) {
               break;
             }

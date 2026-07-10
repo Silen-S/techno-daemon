@@ -24,6 +24,7 @@ import {
 import { useBeatEngine } from "@/hooks/useBeatEngine";
 import { labels, type Lang } from "@/i18n/labels";
 import { STEPS } from "@/patterns/defaults";
+import { LOOP_BAR_OPTIONS } from "@/patterns/loop";
 import { useBeatStore } from "@/store/useBeatStore";
 import {
   ALL_INTENTS,
@@ -101,7 +102,8 @@ export function NullbeatApp() {
     moodText: state.moodText,
     imageTone: state.imageTone,
     progressionIndex: state.progressionIndex,
-    tieSynth: state.tieSynth
+    tieSynth: state.tieSynth,
+    loopBars: state.loopBars
   });
 
   const resolveGrooveMeta = () => {
@@ -204,6 +206,13 @@ export function NullbeatApp() {
       navigator.mediaSession.playbackState = state.playbackState === "stopped" ? "none" : state.playbackState;
     }
   }, [state.playbackState]);
+
+  // ループが複数小節のとき、シーケンサーは1小節ずつページで表示する
+  const [page, setPage] = useState(0);
+  const currentPage = Math.min(page, state.loopBars - 1);
+  const pageOffset = currentPage * STEPS;
+  // 今どの小節が鳴っているか(ページボタンの点灯用)
+  const soundingBar = state.bar > 0 ? (state.bar - 1) % state.loopBars : -1;
 
   const chord = chordForBar(Math.max(state.bar, 1), state.intent, state.progressionIndex);
   const progression = progressionFor(state.intent, state.progressionIndex);
@@ -319,7 +328,26 @@ export function NullbeatApp() {
 
       <section className="console">
         <div className="sequencer">
-          <StepHeader activeStep={state.activeStep} />
+          {state.loopBars > 1 ? (
+            <div className="pageBar" role="group" aria-label={t.pageLabel}>
+              <span>{t.pageLabel}</span>
+              {Array.from({ length: state.loopBars }, (_, index) => (
+                <button
+                  className={[
+                    "segment",
+                    index === currentPage ? "active" : "",
+                    index === soundingBar ? "sounding" : ""
+                  ].join(" ")}
+                  key={index}
+                  onClick={() => setPage(index)}
+                  type="button"
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <StepHeader activeStep={state.activeStep} pageOffset={pageOffset} />
           {state.tracks.map((track) => (
             <TrackRow
               activeStep={state.activeStep}
@@ -331,6 +359,7 @@ export function NullbeatApp() {
               onMutation={() => state.toggleTrackMutation(track.id)}
               onToggleStep={(index) => state.toggleStep(track.id, index)}
               onVolume={(volume) => state.setTrackVolume(track.id, volume)}
+              pageOffset={pageOffset}
               track={track}
             />
           ))}
@@ -481,6 +510,22 @@ export function NullbeatApp() {
                   type="button"
                 >
                   {t.targets[target]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="panelBlock">
+            <h2>{t.loopHeading}</h2>
+            <div className="segments">
+              {LOOP_BAR_OPTIONS.map((bars) => (
+                <button
+                  className={state.loopBars === bars ? "segment active" : "segment"}
+                  key={bars}
+                  onClick={() => state.setLoopBars(bars)}
+                  type="button"
+                >
+                  {t.loopBars(bars)}
                 </button>
               ))}
             </div>
@@ -703,12 +748,12 @@ function DaemonIcon() {
   );
 }
 
-function StepHeader({ activeStep }: { activeStep: number }) {
+function StepHeader({ activeStep, pageOffset }: { activeStep: number; pageOffset: number }) {
   return (
     <div className="stepHeader" aria-hidden="true">
       <span />
       {Array.from({ length: STEPS }, (_, index) => (
-        <span className={activeStep === index ? "active" : ""} key={index}>
+        <span className={activeStep === pageOffset + index ? "active" : ""} key={index}>
           {index + 1}
         </span>
       ))}
@@ -737,6 +782,7 @@ function TrackRow({
   onMutation,
   onToggleStep,
   onVolume,
+  pageOffset,
   track
 }: {
   activeStep: number;
@@ -747,12 +793,15 @@ function TrackRow({
   onMutation: () => void;
   onToggleStep: (index: number) => void;
   onVolume: (volume: number) => void;
+  pageOffset: number;
   track: TrackState;
 }) {
   const t = labels[lang];
   const trackName = t.tracks[track.id];
   // ベースの音程はコード進行から導出されるため、現在小節のコードで表示する
   const noteAt = (index: number, note?: string) => (track.id === "bass" ? bassNoteForStep(chord, index) : note);
+  // 表示中のページ(1小節ぶん)のステップだけを描画する
+  const pageSteps = track.steps.slice(pageOffset, pageOffset + STEPS);
   const mutColor = track.lastMutatedTarget ? mutationColors[track.lastMutatedTarget] : "transparent";
   const trackWideMutated = !!track.lastMutatedTarget && trackWideTargets.includes(track.lastMutatedTarget);
 
@@ -789,19 +838,27 @@ function TrackRow({
       </div>
 
       <div className="steps">
-        {track.steps.map((step, index) => (
-          <button
-            aria-label={`${trackName} step ${index + 1}`}
-            className={[step.enabled ? "step on" : "step", activeStep === index ? "playing" : "", step.lastMutated ? "mutated" : ""].join(" ")}
-            disabled={locked}
-            key={`${track.id}-${index}`}
-            onClick={() => onToggleStep(index)}
-            style={{ "--velocity": step.velocity } as React.CSSProperties}
-            type="button"
-          >
-            {step.enabled && noteAt(index, step.note) ? <span className="noteLabel">{noteAt(index, step.note)}</span> : null}
-          </button>
-        ))}
+        {pageSteps.map((step, index) => {
+          // ページ内の位置(0-15)と、パターン配列上の絶対位置
+          const absolute = pageOffset + index;
+          return (
+            <button
+              aria-label={`${trackName} step ${absolute + 1}`}
+              className={[
+                step.enabled ? "step on" : "step",
+                activeStep === absolute ? "playing" : "",
+                step.lastMutated ? "mutated" : ""
+              ].join(" ")}
+              disabled={locked}
+              key={`${track.id}-${absolute}`}
+              onClick={() => onToggleStep(absolute)}
+              style={{ "--velocity": step.velocity } as React.CSSProperties}
+              type="button"
+            >
+              {step.enabled && noteAt(index, step.note) ? <span className="noteLabel">{noteAt(index, step.note)}</span> : null}
+            </button>
+          );
+        })}
       </div>
 
       <div className="trackStats">

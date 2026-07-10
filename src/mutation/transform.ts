@@ -55,13 +55,17 @@ export const buildTrackFromDirective = (track: TrackState, directive: TrackDirec
       : pick(soundPools[track.id].filter((sound) => sound !== track.soundId)),
     filter: clamp(directive.filter),
     density,
-    steps: track.steps.map((step, index) => ({
-      ...step,
-      enabled: pattern[index],
-      velocity: clamp(index % 4 === 0 ? baseVelocity + 0.18 : baseVelocity + randomBetween(-0.08, 0.08), 0.18, 0.95),
-      ...(notes ? { note: notes[index] } : {}),
-      lastMutated: false
-    }))
+    // 複数小節ループでは、1小節ぶんのパターン/フレーズを各小節へ敷き詰める
+    steps: track.steps.map((step, index) => {
+      const inBar = index % STEPS;
+      return {
+        ...step,
+        enabled: pattern[inBar],
+        velocity: clamp(inBar % 4 === 0 ? baseVelocity + 0.18 : baseVelocity + randomBetween(-0.08, 0.08), 0.18, 0.95),
+        ...(notes ? { note: notes[inBar] } : {}),
+        lastMutated: false
+      };
+    })
   };
 };
 

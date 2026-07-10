@@ -16,6 +16,7 @@ export const useBeatEngine = () => {
   const intent = useBeatStore((state) => state.intent);
   const progressionIndex = useBeatStore((state) => state.progressionIndex);
   const tieSynth = useBeatStore((state) => state.tieSynth);
+  const loopBars = useBeatStore((state) => state.loopBars);
   const interval = useBeatStore((state) => state.mutationInterval);
   const setActiveStep = useBeatStore((state) => state.setActiveStep);
   const setBar = useBeatStore((state) => state.setBar);
@@ -74,8 +75,8 @@ export const useBeatEngine = () => {
   }, [setActiveStep, setBar]);
 
   useEffect(() => {
-    engineRef.current?.update(tracks, bpm, intent, progressionIndex, tieSynth);
-  }, [tracks, bpm, intent, progressionIndex, tieSynth]);
+    engineRef.current?.update(tracks, bpm, intent, progressionIndex, tieSynth, loopBars);
+  }, [tracks, bpm, intent, progressionIndex, tieSynth, loopBars]);
 
   return engineRef;
 };

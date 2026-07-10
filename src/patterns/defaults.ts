@@ -101,5 +101,6 @@ export const defaultSnapshot: AppSnapshot = {
   moodText: "",
   imageTone: "none",
   progressionIndex: 0,
-  tieSynth: true
+  tieSynth: true,
+  loopBars: 1
 };

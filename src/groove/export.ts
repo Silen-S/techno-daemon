@@ -23,6 +23,7 @@ export type GrooveScript = {
   memo: string;
   createdAt: string;
   bars: number;
+  loopBars: number;
   key: string;
   bpm: number;
   intent: AppSnapshot["intent"];
@@ -40,6 +41,7 @@ export const buildGrooveScript = (snapshot: AppSnapshot, title: string, memo: st
     memo,
     createdAt: new Date().toISOString(),
     bars: GROOVE_BARS,
+    loopBars: snapshot.loopBars ?? 1,
     key: KEY_LABEL,
     bpm: snapshot.bpm,
     intent: snapshot.intent,
@@ -183,16 +185,20 @@ const renderGrooveBuffer = async (snapshot: AppSnapshot): Promise<AudioBuffer> =
       filterEnvelope: { attack: 0.004, decay: 0.16, sustain: 0.3, release: 0.14, baseFrequency: 400, octaves: 3 }
     }).connect(chainHeads.synth);
 
+    const loopBars = Math.max(1, snapshot.loopBars ?? 1);
+
     for (let bar = 1; bar <= GROOVE_BARS; bar += 1) {
       const chord = chordForBar(bar, snapshot.intent, snapshot.progressionIndex);
       for (let step = 0; step < STEPS; step += 1) {
         const time = lead + ((bar - 1) * STEPS + step) * stepDuration;
+        // パターン配列上の絶対ステップ番号(ループ長で折り返す)
+        const abs = ((bar - 1) % loopBars) * STEPS + step;
 
         snapshot.tracks.forEach((track) => {
-          if (track.muted || !track.steps[step]?.enabled) {
+          if (track.muted || !track.steps[abs]?.enabled) {
             return;
           }
-          const velocity = (track.steps[step]?.velocity ?? 0.55) * track.volume;
+          const velocity = (track.steps[abs]?.velocity ?? 0.55) * track.volume;
 
           if (track.id === "kick") {
             kick.triggerAttackRelease(kickPreset.note, "16n", time, velocity);
@@ -207,15 +213,15 @@ const renderGrooveBuffer = async (snapshot: AppSnapshot): Promise<AudioBuffer> =
             bass.triggerAttackRelease(bassNoteForStep(chord, step), "16n", time, velocity * 0.9);
           }
           if (track.id === "synth") {
-            const note = track.steps[step]?.note ?? "A3";
+            const note = track.steps[abs]?.note ?? "A3";
             if (snapshot.tieSynth) {
-              const prev = step > 0 ? track.steps[step - 1] : undefined;
+              const prev = abs > 0 ? track.steps[abs - 1] : undefined;
               if (prev?.enabled && (prev.note ?? "A3") === note) {
                 return;
               }
               let count = 1;
-              while (step + count < track.steps.length) {
-                const nextStep = track.steps[step + count];
+              while (abs + count < track.steps.length) {
+                const nextStep = track.steps[abs + count];
                 if (!nextStep?.enabled || (nextStep.note ?? "A3") !== note) {
                   break;
                 }

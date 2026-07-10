@@ -11,6 +11,9 @@ type Labels = {
   paused: string;
   mutationHeading: string;
   targets: Record<MutationTarget, string>;
+  loopHeading: string;
+  loopBars: (bars: number) => string;
+  pageLabel: string;
   timingHeading: string;
   interval: (interval: MutationInterval) => string;
   autoAcceptHeading: string;
@@ -78,6 +81,9 @@ export const labels: Record<Lang, Labels> = {
       density: "density",
       velocity: "velocity"
     },
+    loopHeading: "Loop length",
+    loopBars: (bars) => (bars === 1 ? "1 bar" : `${bars} bars`),
+    pageLabel: "Bar",
     timingHeading: "Timing",
     interval: (interval) => (interval === "manual" ? "Manual" : `${interval} bars`),
     autoAcceptHeading: "Auto accept",
@@ -154,6 +160,9 @@ export const labels: Record<Lang, Labels> = {
       density: "密度",
       velocity: "強弱"
     },
+    loopHeading: "ループ長",
+    loopBars: (bars) => `${bars}小節`,
+    pageLabel: "小節",
     timingHeading: "変化の間隔",
     interval: (interval) => (interval === "manual" ? "手動" : `${interval}小節ごと`),
     autoAcceptHeading: "自動採用",
